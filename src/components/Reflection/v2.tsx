@@ -1,7 +1,7 @@
 import React from "react";
 import Image from "next/image";
 
-export default function FeedBack() {
+export default function FeedBackOrga() {
   return (
     <div className="py-16 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -10,16 +10,15 @@ export default function FeedBack() {
             Volunteer
           </div>
         </div>
-
         <div className="space-y-12">
           <div className="flex flex-col md:flex-row items-start gap-15">
             <div className="md:w-40 flex-shrink-0">
-              <div className="w-60 h-40 rounded-lg">
+              <div className="w-50 h-30 rounded-lg">
                 <Image
-                  src="/o1.png"
-                  alt="Kunthy"
-                  width={240}
-                  height={160}
+                  src="/Kirirom.png"
+                  alt="Kirirom"
+                  width={200}
+                  height={120}
                   className="w-full h-full object-cover"
                 />
               </div>
@@ -45,12 +44,12 @@ export default function FeedBack() {
 
           <div className="flex flex-col md:flex-row-reverse items-start gap-4">
             <div className="md:w-40 flex-shrink-0">
-              <div className="w-50 h-70 bg-red-400 rounded-lg overflow-hidden">
+              <div className="w-40 h-50 bg-red-400 rounded-lg ">
                 <Image
-                  src="/o2.png"
-                  alt="Sokunthy Noun"
-                  width={200}
-                  height={280}
+                  src="/pact.jpg"
+                  alt="Pact"
+                  width={160}
+                  height={200}
                   className="w-full h-full object-cover"
                 />
               </div>

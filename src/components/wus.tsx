@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/button";
+import Image from "next/image";
 
 export default function Wus() {
   return (
@@ -14,30 +14,34 @@ export default function Wus() {
 
             <div className="text-center">
               <div className="w-48 h-48 mx-auto mb-6 rounded-full overflow-hidden">
-                <img
+                <Image
                   src="/w1.jpg"
                   alt="Make a positive impact"
+                  width={192}
+                  height={192}
                   className="w-full h-full object-cover"
                 />
               </div>
               <h3 className="text-xl font-bold mb-4">Make a Positive Impact</h3>
               <p className="text-gray-600">
-                Volunteering allows you to help others and strengthen your community. Whether you're supporting
+                Volunteering allows you to help others and strengthen your community. Whether you&apos;re supporting
                 education, health, the environment, or social programs, your time and effort can create real, lasting
-                change in people's lives.
+                change in people&apos;s lives.
               </p>
             </div>
 
             <div className="text-center">
               <div className="w-48 h-48 mx-auto mb-6 rounded-full overflow-hidden">
-                <img 
+                <Image 
                 src="/w2.avif" 
                 alt="Learn and grow" 
+                width={192} 
+                height={192} 
                 className="w-full h-full object-cover" />
               </div>
               <h3 className="text-xl font-bold mb-4">Learn and Grow</h3>
               <p className="text-gray-600">
-                Volunteering is a chance to gain new skills, build confidence, and discover your passions. You'll
+                Volunteering is a chance to gain new skills, build confidence, and discover your passions. You&apos;ll
                 develop leadership, communication, teamwork, and problem-solving strengths. You can improve your
                 conversations, teamwork, and problem-solving skills—especially helpful for students and job seekers.
               </p>
@@ -45,9 +49,11 @@ export default function Wus() {
 
             <div className="text-center">
               <div className="w-48 h-48 mx-auto mb-6 rounded-full overflow-hidden">
-                <img
+                <Image
                   src="/w3.jpg"
                   alt="Connect with others"
+                  width={192}
+                  height={192}
                   className="w-full h-full object-cover"
                 />
               </div>

@@ -1,6 +1,3 @@
-import { Button } from "@/components/ui/button"
-import Link from "next/link"
-
 export function HeroSection3() {
   return (
     <div

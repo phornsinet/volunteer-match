@@ -1,6 +1,5 @@
 'use client'
 import { Button } from "@/components/ui/button"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ChevronDown, MapPin } from "lucide-react"
 import { useState } from "react"
 import { Input } from "@/components/ui/input"
@@ -11,7 +10,6 @@ export function SearchFilters() {
   const [showSkillDropdown, setShowSkillDropdown] = useState(false)
   const [selectedCause, setSelectedCause] = useState("")
   const [selectedSkill, setSelectedSkill] = useState("")
-  const [selectedLocation, setSelectedLocation] = useState("Phnom Penh, Cambodia")
 
   const causes = [
     { icon: "🐾", label: "Animal" },

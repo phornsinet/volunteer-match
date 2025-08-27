@@ -12,7 +12,6 @@ export default function HomePage() {
       <StatisticsSection />
       <VolunteerReflection />
       <TrustSection/>
-
     </div>
   )
 }

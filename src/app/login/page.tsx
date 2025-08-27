@@ -1,20 +1,61 @@
-"use client"
+"use client";
 
-import type React from "react"
-import { useState } from "react"
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
+import React, { useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Loader2 } from 'lucide-react';
+import { AuthProvider, useAuth } from "@/action/auth";
+import toast from "react-hot-toast";
 
+export default function LoginPage() {
+  const router = useRouter();
+  const auth = useAuth();
 
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-export default function Loginpage() {
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    console.log("Login attempt:", { email, password })
-  }
+    if (!auth?.signIn) {
+      toast.error("Authentication service not available.");
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const { data, error } = await auth.signIn(email, password);
+
+      if (error) {
+        toast.error(error.message);
+        setError(error.message);
+      } else if (data?.user) {
+        toast.success("Login successful! Redirecting you now...");
+        const userRole = data.user.user_metadata?.user_role;
+        if (userRole === 'organization') {
+          router.push('/account-organazer');
+        } else if (userRole === 'volunteer') {
+          router.push('/account-volunteer');
+        } else {
+          // Fallback for users without a defined role or unexpected roles
+          router.push('/');
+        }
+      }
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
+      toast.error(errorMessage);
+      setError(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loginInProgress = isLoading || auth?.loading;
 
   return (
     <div className="min-h-screen bg-white">
@@ -26,6 +67,12 @@ export default function Loginpage() {
               <p className="text-gray-700">Please enter your information</p>
             </div>
 
+            {error && (
+              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-md mb-4" role="alert">
+                <span className="block sm:inline">{error}</span>
+              </div>
+            )}
+            
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-black mb-2">
@@ -37,7 +84,7 @@ export default function Loginpage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full px-4 py-3 rounded-lg border-0 bg-white text-black placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Enter your email"
+                  placeholder="Please enter the email address you registered with."
                   required
                 />
               </div>
@@ -55,33 +102,36 @@ export default function Loginpage() {
                   placeholder="Enter your password"
                   required
                 />
-
                 <div className="text-right mt-2">
-                  <a href="#" className="text-sm text-blue-600 hover:text-blue-800 transition-colors">
+                  <Link href="/forgotpw" className="text-sm text-blue-600 hover:text-blue-800 transition-colors">
                     Forget Passwords
-                  </a>
+                  </Link>
                 </div>
               </div>
 
-            <Button
-            type="submit"
-            className="w-full bg-red-500 hover:bg-red-700 text-white font-semibold py-2 rounded-full text-lg mt-8">
-                Login
-          </Button>
-        <div className="text-center mt-6">
-          <p className="text-black">Already have an account?{" "}
-             <Link href="/login" className="text-red-600 hover:text-blue-400 underline">
-                    Sign up
-              </Link>
-          </p>
-        </div>
-            </form>
+              <Button
+                type="submit"
+                className="w-full bg-red-500 hover:bg-red-700 text-white font-semibold py-2 rounded-full text-lg mt-8"
+                disabled={loginInProgress}
+              >
+                {loginInProgress ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  "Login"
+                )}
+              </Button>
 
-            
+              <div className="text-center mt-6">
+                <p className="text-black">Don&apos;t have an account?{" "}
+                  <Link href="/signup" className="text-red-600 hover:text-blue-400 underline">
+                    Sign up
+                  </Link>
+                </p>
+              </div>
+            </form>
           </div>
         </div>
       </div>
-         
     </div>
-  )
+  );
 }

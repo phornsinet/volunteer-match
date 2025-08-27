@@ -1,14 +1,20 @@
-"use client"
+// components/RegisterPage.tsx
 
-import type React from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { useState } from "react"
-import Link from "next/link"
+"use client";
+
+import type React from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
+import { supabase } from "@/lib/supabase";
 
 export default function RegisterPage() {
+  const router = useRouter();
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -16,20 +22,131 @@ export default function RegisterPage() {
     password: "",
     confirmPassword: "",
     userRole: "",
-  })
+  });
+
+  const [errors, setErrors] = useState({
+    fullName: "",
+    email: "",
+    phoneNumber: "",
+    password: "",
+    confirmPassword: "",
+    userRole: "",
+  });
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({
       ...prev,
       [field]: value,
-    }))
-  }
+    }));
+    // Clear error for the field being changed
+    if (errors[field as keyof typeof errors]) {
+      setErrors((prev) => ({
+        ...prev,
+        [field]: "",
+      }));
+    }
+  };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+  const validateForm = () => {
+    const newErrors = {
+      fullName: "",
+      email: "",
+      phoneNumber: "",
+      password: "",
+      confirmPassword: "",
+      userRole: "",
+    };
+    let isValid = true;
 
-    console.log("Registration form submitted:", formData)
-  }
+    if (!formData.fullName) {
+      newErrors.fullName = "Please enter your full name or organization name.";
+      isValid = false;
+    }
+
+    if (!formData.email) {
+      newErrors.email = "Please enter your email address.";
+      isValid = false;
+    } else {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(formData.email)) {
+        newErrors.email = "Please enter a valid email address.";
+        isValid = false;
+      }
+    }
+
+    if (!formData.phoneNumber) {
+      newErrors.phoneNumber = "Please enter your phone number.";
+      isValid = false;
+    } else {
+      const phoneRegex = /^\d+$/;
+      if (!phoneRegex.test(formData.phoneNumber)) {
+        newErrors.phoneNumber = "Phone number should only contain digits.";
+        isValid = false;
+      }
+    }
+
+    if (!formData.password) {
+      newErrors.password = "Please enter a password.";
+      isValid = false;
+    } else if (formData.password.length < 6) {
+      newErrors.password = "Password must be at least 6 characters long.";
+      isValid = false;
+    }
+
+    if (!formData.confirmPassword) {
+      newErrors.confirmPassword = "Please confirm your password.";
+      isValid = false;
+    } else if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = "Passwords do not match.";
+      isValid = false;
+    }
+
+    if (!formData.userRole) {
+      newErrors.userRole = "Please select a user role.";
+      isValid = false;
+    }
+
+    setErrors(newErrors);
+    return isValid;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!validateForm()) {
+      toast.error("Please fix the errors in the form.");
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          data: {
+            full_name: formData.fullName,
+            phone_number: formData.phoneNumber,
+            user_role: formData.userRole,
+          }
+        }
+      });
+
+      if (error) {
+        // Show Supabase API error message
+        toast.error(error.message);
+      } else if (data.user) {
+        // Registration successful
+        toast.success("Registration successful! Check your email for a confirmation link.");
+
+        // Conditionally redirect based on user role
+        router.push('/');
+      }
+    } catch (error) {
+      console.error('Supabase registration error:', error);
+      // Show generic error message for unexpected errors
+      toast.error('An unexpected error occurred. Please try again.');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-white">
@@ -52,8 +169,10 @@ export default function RegisterPage() {
                   value={formData.fullName}
                   onChange={(e) => handleInputChange("fullName", e.target.value)}
                   className="mt-2 bg-white border-gray-300 rounded-md h-12"
+                  placeholder="Enter your full name or organization name"
                   required
                 />
+                {errors.fullName && <p className="text-gray-300 text-xs mt-1">{errors.fullName}</p>}
               </div>
 
               <div>
@@ -66,8 +185,10 @@ export default function RegisterPage() {
                   value={formData.email}
                   onChange={(e) => handleInputChange("email", e.target.value)}
                   className="mt-2 bg-white border-gray-300 rounded-md h-12"
+                  placeholder="This will be used for login and communication"
                   required
                 />
+                {errors.email && <p className="text-gray-300 text-xs mt-1">{errors.email}</p>}
               </div>
 
               <div>
@@ -80,8 +201,10 @@ export default function RegisterPage() {
                   value={formData.phoneNumber}
                   onChange={(e) => handleInputChange("phoneNumber", e.target.value)}
                   className="mt-2 bg-white border-gray-300 rounded-md h-12"
+                  placeholder="Please provide a contact phone number"
                   required
                 />
+                {errors.phoneNumber && <p className="text-gray-300 text-xs mt-1">{errors.phoneNumber}</p>}
               </div>
 
               <div>
@@ -94,8 +217,10 @@ export default function RegisterPage() {
                   value={formData.password}
                   onChange={(e) => handleInputChange("password", e.target.value)}
                   className="mt-2 bg-white border-gray-300 rounded-md h-12"
+                  placeholder="Password must be at least 6 characters long"
                   required
                 />
+                {errors.password && <p className="text-gray-300 text-xs mt-1">{errors.password}</p>}
               </div>
 
               <div>
@@ -108,8 +233,10 @@ export default function RegisterPage() {
                   value={formData.confirmPassword}
                   onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
                   className="mt-2 bg-white border-gray-300 rounded-md h-12"
+                  placeholder="Please enter the same password as above"
                   required
                 />
+                {errors.confirmPassword && <p className="text-gray-300 text-xs mt-1">{errors.confirmPassword}</p>}
               </div>
 
               <div>
@@ -118,19 +245,19 @@ export default function RegisterPage() {
                 </Label>
                 <Select onValueChange={(value) => handleInputChange("userRole", value)} required>
                   <SelectTrigger className="mt-2 bg-white border-gray-300 rounded-md h-12">
-                    <SelectValue placeholder="Select your role" />
+                    <SelectValue placeholder="Select your role (Volunteer or Organization)" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="volunteer">Volunteer</SelectItem>
                     <SelectItem value="organization">Organization</SelectItem>
                   </SelectContent>
                 </Select>
+                {errors.userRole && <p className="text-gray-300 text-xs mt-1">{errors.userRole}</p>}
               </div>
 
               <Button
                 type="submit"
-                className="w-full bg-blue-500 hover:bg-blue-700 text-white font-semibold py-3 rounded-full text-lg mt-8"
-              >
+                className="w-full bg-blue-500 hover:bg-blue-700 text-white font-semibold py-3 rounded-full text-lg mt-8">
                 Register
               </Button>
 
@@ -147,5 +274,5 @@ export default function RegisterPage() {
         </div>
       </section>
     </div>
-  )
+  );
 }

@@ -1,12 +1,83 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import Image from "next/image"
-import { usePathname } from "next/navigation"
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import Image from "next/image";
+import { useAuth } from "@/action/auth";
+import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
 
-export default function Navi() {
-  const pathname = usePathname()
+export default function Navigation() {
+  const { session, loading, signOut } = useAuth() ?? {};
+  const pathname = usePathname();
+  const [userRole, setUserRole] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function getUserRole() {
+      if (session?.user) {
+        const userRoleFromMetadata = session.user.user_metadata?.user_role;
+        if (userRoleFromMetadata) {
+          setUserRole(userRoleFromMetadata);
+        } else {
+          console.error("User role not found in metadata.");
+          setUserRole(null);
+        }
+      } else {
+        setUserRole(null);
+      }
+    }
+
+    getUserRole();
+  }, [session]);
+
+  if (loading) {
+    return null;
+  }
+
+  const accountLink = userRole === 'volunteer' 
+    ? '/account-volunteer' 
+    : userRole === 'organization' 
+    ? '/account-organazer' 
+    : '/login';
+
+  const handleLogout = async () => {
+    if (signOut) {
+      await signOut();
+    }
+  };
+
+  const renderOpportunitiesLink = () => {
+    if (userRole === 'organization') {
+      return (
+        <Link href="/post">
+          <Button
+            className={
+              pathname === "/post"
+                ? "bg-red-400 hover:bg-red-500 text-white px-6"
+                : "bg-white hover:bg-gray-300 text-gray-700 px-6"
+            }
+          >
+            POST OPPORTUNITY
+          </Button>
+        </Link>
+      );
+    } else {
+      return (
+        <Link href="/find-opportunities">
+          <Button
+            className={
+              pathname === "/find-opportunities"
+                ? "bg-red-400 hover:bg-red-500 text-white px-6"
+                : "bg-white hover:bg-gray-300 text-gray-700 px-6"
+            }
+          >
+            FIND OPPORTUNITIES
+          </Button>
+        </Link>
+      );
+    }
+  };
 
   return (
     <nav className="bg-white">
@@ -32,55 +103,71 @@ export default function Navi() {
                 </Button>
               </Link>
 
-              <Link href="/find-opportunities">
-              <Button
+              {renderOpportunitiesLink()}
 
-                className={
-                  pathname === "/find-opportunities"
-                    ? "bg-red-400 hover:bg-red-500 text-white px-6"
-                    : "bg-white hover:bg-gray-300 text-gray-700 px-6"
-                }
-              >
-                FIND OPPORTUNITIES
-              </Button>
+              <Link href="/about">
+                <Button
+                  className={
+                    pathname === "/about"
+                      ? "bg-red-400 hover:bg-red-500 text-white px-6"
+                      : "bg-white hover:bg-gray-300 text-gray-700 px-6"
+                  }
+                >
+                  ABOUT
+                </Button>
               </Link>
 
-              <Link
-                href="/about"
-                className={
-                  pathname === "/about"
-                    ? "bg-red-400 text-white px-3 py-2 text-sm font-medium rounded"
-                    : "text-gray-700 hover:text-gray-900 px-3 py-2 text-sm font-medium"
-                }
-              >
-                ABOUT
-              </Link>
-
-              <Link
-                href="/login"
-                className={
-                  pathname === "/login"
-                    ? "bg-red-400 text-white px-3 py-2 text-sm font-medium rounded"
-                    : "text-gray-700 hover:text-gray-900 px-3 py-2 text-sm font-medium"
-                }
-              >
-                LOGIN
-              </Link>
-
-              <Link
-                href="/register"
-                className={
-                  pathname === "/register"
-                    ? "bg-red-400 text-white px-3 py-2 text-sm font-medium rounded"
-                    : "text-gray-700 hover:text-gray-900 px-3 py-2 text-sm font-medium"
-                }
-              >
-                REGISTER
-              </Link>
+              {/* Conditional rendering for authenticated vs. unauthenticated users */}
+              {!session ? (
+                <>
+                  <Link href="/login">
+                    <Button
+                      className={
+                        pathname === "/login"
+                          ? "bg-red-400 hover:bg-red-500 text-white px-6"
+                          : "bg-white hover:bg-gray-300 text-gray-700 px-6"
+                      }
+                    >
+                      LOGIN
+                    </Button>
+                  </Link>
+                  <Link href="/register">
+                    <Button
+                      className={
+                        pathname === "/register"
+                          ? "bg-red-400 hover:bg-red-500 text-white px-6"
+                          : "bg-white hover:bg-gray-300 text-gray-700 px-6"
+                      }
+                    >
+                      REGISTER
+                    </Button>
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Link href={accountLink}>
+                    <Button
+                      className={
+                        (pathname === "/account-volunteer" || pathname === "/account-organization")
+                          ? "bg-red-400 hover:bg-red-500 text-white px-6"
+                          : "bg-white hover:bg-gray-300 text-gray-700 px-6"
+                      }
+                    >
+                      ACCOUNT
+                    </Button>
+                  </Link>
+                  <Button
+                    onClick={handleLogout}
+                    className="bg-white hover:bg-gray-300 text-gray-700 px-6"
+                  >
+                    LOGOUT
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </div>
       </div>
     </nav>
-  )
+  );
 }

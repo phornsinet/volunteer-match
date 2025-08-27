@@ -1,10 +1,7 @@
 "use client";
 import React from "react";
-import Navi from "@/components/Navbar/navigation";
 import { HeroSection3 } from "@/components/Hero-Section/hero-section3";
-import { Footer } from "@/components/Footer/footer";
 import Image from "next/image";
-import Link from "next/link";
 
 export default function AboutUs() {
   return (
@@ -28,7 +25,7 @@ export default function AboutUs() {
               need to recruit, manage, and engage volunteers effectively.
             </p>
             <p className="text-lg leading-relaxed text-center">
-              Whether you're passionate about education, healthcare, the
+              Whether you&apos;re passionate about education, healthcare, the
               environment, or social justice — Remarkable Network is here to
               help you take action and be part of something bigger.
             </p>
@@ -77,7 +74,7 @@ export default function AboutUs() {
               Our Founder
             </h2>
             <blockquote className="text-lg leading-relaxed text-gray-800 font-medium text-left">
-              "When I started Remarkable Network, I had one simple belief: that
+              &quot;When I started Remarkable Network, I had one simple belief: that
               everyone, everywhere, has the power to make a difference. I’ve
               seen firsthand how even the smallest act of kindness—teaching a
               child, planting a tree, offering a hand—can change lives. This
@@ -86,17 +83,19 @@ export default function AboutUs() {
               to serve, and organizations in need of their support. Remarkable
               Network is here to bridge that gap—to make it easier, faster, and
               more meaningful to volunteer. My vision is a global community
-              where service is not a duty, but a shared joy. Whether you're a
+              where service is not a duty, but a shared joy. Whether you&apos;re a
               student, a working professional, or a retiree, your time and
               skills matter. Together, we can build something truly remarkable.
-              Thank you for believing in the power of people."
+              Thank you for believing in the power of people.&quot;
             </blockquote>
           </div>
           <div className="md:w-1/2 flex justify-center">
             <div className="relative w-90 h-106">
-              <img
-                src="b2.png"
+              <Image
+                src="/b2.png"
                 alt="Phorn Sinet"
+                width={300}
+                height={424}
                 className="absolute inset-0 w-full h-full object-cover "
                 style={{ clipPath: "url(#founder-clip)" }}
               />
