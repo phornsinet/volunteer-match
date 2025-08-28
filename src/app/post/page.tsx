@@ -63,7 +63,7 @@ export default function PostingPage() {
 
       {/* Main Content - Single Column Form */}
       <div className="max-w-2xl mx-auto px-4 py-8">
-        <div className="bg-white p-8 rounded-lg shadow-sm border border-gray-200">
+        <div className="bg-blue-400 p-8 rounded-lg shadow-sm border border-gray-200">
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Title Field */}
             <div>

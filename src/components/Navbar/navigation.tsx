@@ -58,15 +58,15 @@ export default function Navigation() {
   const renderOpportunitiesLink = () => {
     if (userRole === 'organization') {
       return (
-        <Link href="/post">
+        <Link href="/find-organization">
           <Button
             className={
-              pathname === "/post"
+              pathname === "/find-organization"
                 ? "bg-red-400 hover:bg-red-500 text-white px-6"
                 : "bg-white hover:bg-gray-300 text-gray-700 px-6"
             }
           >
-            POST OPPORTUNITY
+            FIND-OPPORTUNITIES
           </Button>
         </Link>
       );

@@ -18,17 +18,6 @@ export function HeroSection2() {
             cause — this is the place for you.
           </h1>
           <div className="flex justify-center">
-            <Link href="/find-opportunities" >
-              <Button className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 font-semibold transition-transform duration-200 hover:scale-105">
-                VOLUNTEER
-              </Button>
-            </Link>
-            <Link href="">
-              <Button
-              className="bg-white text-gray-800 hover:bg-gray-100 px-6 py-2 font-semibold transition-transform duration-200 hover:scale-105">
-                ORGANIZATION
-              </Button>
-            </Link>
           <div className="flex absolute right-30">
             <Link href="/post">
             <Button className="bg-red-600 text-white-400 hover:bg-blue-400 px-6 py-2 font-semibold transition-transform duration-200 hover:scale-105 ml-auto">

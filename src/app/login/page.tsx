@@ -67,48 +67,8 @@ export default function LoginPage() {
         toast.error(error.message);
         setError(error.message);
       } else if (data?.user) {
-        toast.success("Login successful! Redirecting...");
-
-        // ✅ Try to fetch user profile
-        let { data: profileData, error: profileError } = await supabase
-          .from("profiles")
-          .select("user_role")
-          .eq("id", data.user.id)
-          .maybeSingle();
-
-        // ✅ If no profile row exists, create one
-        if (!profileData) {
-          const { data: newProfile, error: insertError } = await supabase
-            .from("profiles")
-            .insert([
-              {
-                id: data.user.id, // must match auth.users.id
-                user_role: null, // set default role or leave null
-              },
-            ])
-            .select("user_role")
-            .single();
-
-          if (insertError) {
-            console.error("Insert profile error:", insertError);
-            toast.error("Could not create user profile. Redirecting to home.");
-            router.push("/");
-            return;
-          }
-
-          profileData = newProfile;
-        }
-
-        // ✅ Now redirect based on role
-        const userRole = profileData?.user_role;
-        if (userRole === "organization") {
-          router.push("/find-organization");
-        } else if (userRole === "volunteer") {
-          router.push("/find-opportunities");
-        } else {
-          toast.error("User role not set. Redirecting to home.");
-          router.push("/");
-        }
+        toast.success("Login successful! Redirecting to homepage...");
+        router.push("/");
       }
     } catch (err: unknown) {
       const errorMessage =
