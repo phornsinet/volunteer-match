@@ -51,7 +51,7 @@ export function HeroSection1({
       );
     } else {
       return (
-        <Link href="/register" passHref>
+        <Link href="/find-opportunities   " passHref>
           <Button className="bg-red-400 hover:bg-red-500 text-white px-6 py-2 font-semibold transition-transform duration-200 hover:scale-105">
             GET STARTED
           </Button>

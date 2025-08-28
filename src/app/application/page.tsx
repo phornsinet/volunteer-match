@@ -1,13 +1,11 @@
 "use client"
 
-import type React from "react"
-import Image from "next/image";
-
-import { useState } from "react"
+import React, { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { createClient } from "../../../utils/supabase/client";
 
 export default function ApplicationPage() {
   const [formData, setFormData] = useState({
@@ -32,9 +30,72 @@ export default function ApplicationPage() {
     setFormData((prev) => ({ ...prev, cv: file }))
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    console.log("Form submitted:", formData)
+
+    const supabase = createClient();
+
+    try {
+      if (!formData.cv) throw new Error("Please upload your CV")
+
+      // Generate unique file name
+      const fileExt = formData.cv.name.split(".").pop()
+      const fileName = `${formData.firstName}-${formData.lastName}-${Date.now()}.${fileExt}`
+
+      // 1️⃣ Upload CV to Supabase Storage
+      const { error: uploadError } = await supabase.storage
+        .from("cvs")
+        .upload(fileName, formData.cv)
+
+      if (uploadError) throw uploadError
+
+      // 2️⃣ Get public URL of the uploaded CV
+      const { data: publicUrlData } = supabase.storage
+        .from("cvs")
+        .getPublicUrl(fileName)
+
+      const cvUrl = publicUrlData.publicUrl
+      console.log("CV Public URL:", cvUrl)
+
+      // 3️⃣ Insert data into Supabase table
+      const { error: dbError } = await supabase.from("applications").insert([
+        {
+          first_name: formData.firstName,
+          last_name: formData.lastName,
+          gender: formData.gender,
+          date_of_birth: formData.dateOfBirth,
+          email: formData.email,
+          phone_number: formData.phoneNumber,
+          why_apply: formData.whyApply,
+          why_choose_you: formData.whyChooseYou,
+          experience: formData.experience,
+          cv_url: cvUrl,
+        },
+      ])
+
+      if (dbError) {
+        console.error("Supabase DB Insert Error:", dbError)
+        throw dbError
+      }
+
+      alert("✅ Application submitted successfully!")
+
+      setFormData({
+        firstName: "",
+        lastName: "",
+        gender: "",
+        dateOfBirth: "",
+        email: "",
+        phoneNumber: "",
+        whyApply: "",
+        whyChooseYou: "",
+        experience: "",
+        cv: null,
+      })
+    } catch (err: any) {
+      console.error("Submission error:", err.message)
+      alert(`❌ Submission failed: ${err.message}`)
+    }
   }
 
   const handleBack = () => {
@@ -42,245 +103,84 @@ export default function ApplicationPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-3xl mx-auto bg-white p-8 rounded-lg shadow">
+        <h1 className="text-2xl font-bold text-red-400 mb-6">Volunteer Application Form</h1>
 
-      <div className="bg-white py-8">
-        <div className="max-w-7xl mx-auto px-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="bg-red-400 text-white px-8 py-4 rounded-lg">
-              <h1 className="text-2xl font-bold">Information Detail</h1>
-            </div>
-          </div>
-          <button
-            onClick={handleBack}
-            className="text-gray-700 hover:text-gray-900 font-medium flex items-center gap-2"
-          >
-            ← BACK
-          </button>
-        </div>
-      </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <InputField label="First Name" value={formData.firstName} onChange={(v) => handleInputChange("firstName", v)} />
+          <InputField label="Last Name" value={formData.lastName} onChange={(v) => handleInputChange("lastName", v)} />
+          <SelectField label="Gender" value={formData.gender} onChange={(v) => handleInputChange("gender", v)} />
+          <InputField label="Date of Birth" type="date" value={formData.dateOfBirth} onChange={(v) => handleInputChange("dateOfBirth", v)} />
+          <InputField label="Email" type="email" value={formData.email} onChange={(v) => handleInputChange("email", v)} />
+          <InputField label="Phone Number" value={formData.phoneNumber} onChange={(v) => handleInputChange("phoneNumber", v)} />
+          <TextareaField label="Why you apply this volunteer?" value={formData.whyApply} onChange={(v) => handleInputChange("whyApply", v)} />
+          <TextareaField label="Why are you the person we chose?" value={formData.whyChooseYou} onChange={(v) => handleInputChange("whyChooseYou", v)} />
+          <TextareaField label="Give me your experience volunteer before?" value={formData.experience} onChange={(v) => handleInputChange("experience", v)} />
 
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <div className="bg-white p-8 rounded-lg shadow-sm">
-            <h2 className="text-red-400 text-xl font-semibold mb-6">Volunteer Form</h2>
-
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  First Name <span className="text-red-500">*</span>
-                </label>
-                <Input
-                  type="text"
-                  value={formData.firstName}
-                  onChange={(e) => handleInputChange("firstName", e.target.value)}
-                  className="w-full"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Last Name <span className="text-red-500">*</span>
-                </label>
-                <Input
-                  type="text"
-                  value={formData.lastName}
-                  onChange={(e) => handleInputChange("lastName", e.target.value)}
-                  className="w-full"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Gender <span className="text-red-500">*</span>
-                </label>
-                <Select onValueChange={(value) => handleInputChange("gender", value)}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select gender" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="male">Male</SelectItem>
-                    <SelectItem value="female">Female</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Date of Birth <span className="text-red-500">*</span>
-                </label>
-                <Input
-                  type="date"
-                  value={formData.dateOfBirth}
-                  onChange={(e) => handleInputChange("dateOfBirth", e.target.value)}
-                  className="w-full"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Email <span className="text-red-500">*</span>
-                </label>
-                <Input
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => handleInputChange("email", e.target.value)}
-                  className="w-full"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Number Phone <span className="text-red-500">*</span>
-                </label>
-                <Input
-                  type="tel"
-                  value={formData.phoneNumber}
-                  onChange={(e) => handleInputChange("phoneNumber", e.target.value)}
-                  className="w-full"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Why you apply this volunteer? <span className="text-red-500">*</span>
-                </label>
-                <Textarea
-                  value={formData.whyApply}
-                  onChange={(e) => handleInputChange("whyApply", e.target.value)}
-                  placeholder="Please type your address here..."
-                  className="w-full h-24 resize-none"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Why are you the person we chose? <span className="text-red-500">*</span>
-                </label>
-                <Textarea
-                  value={formData.whyChooseYou}
-                  onChange={(e) => handleInputChange("whyChooseYou", e.target.value)}
-                  placeholder="Please type your address here..."
-                  className="w-full h-24 resize-none"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-.jsx-700 mb-2">
-                  Give me your experience volunteer before? <span className="text-red-500">*</span>
-                </label>
-                <Textarea
-                  value={formData.experience}
-                  onChange={(e) => handleInputChange("experience", e.target.value)}
-                  placeholder="Please type your address here..."
-                  className="w-full h-24 resize-none"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Upload your CV <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="file"
-                  onChange={handleFileChange}
-                  accept=".pdf,.doc,.docx"
-                  className="w-full p-2 border border-gray-300 rounded-md"
-                  required
-                />
-              </div>
-
-              <Button
-                type="submit"
-                className="w-full bg-blue-500 hover:bg-blue-600 text-white py-3 rounded-lg text-lg font-medium"
-              >
-                Submit
-              </Button>
-            </form>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Upload your CV <span className="text-red-500">*</span></label>
+            <input
+              type="file"
+              onChange={handleFileChange}
+              accept=".pdf,.doc,.docx"
+              className="w-full p-2 border border-gray-300 rounded-md"
+              required
+            />
           </div>
 
-          <div className="bg-blue-300 p-8 rounded-lg">
-            <div className="bg-blue-400 text-white p-6 rounded-lg mb-6">
-              <h3 className="text-xl font-bold mb-4">YOU LOGO Volunteer for you</h3>
+          <Button type="submit" className="w-full bg-blue-500 hover:bg-blue-600 text-white py-3 rounded-lg text-lg font-medium">
+            Submit
+          </Button>
+        </form>
 
-              <div className="space-y-3 text-sm">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">🏢 Organizer:</span>
-                  <span>YOU LOGO</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">📍 Location:</span>
-                  <span>Phnom Penh, Cambodia</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">👨‍💼 Occupation:</span>
-                  <span>Graphic Design</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">📅 Start:</span>
-                  <span>1 Jan, 2026</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">⏰ Duration:</span>
-                  <span>3 months, 3days/Week</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">📧 Email:</span>
-                  <span>youlogo@gmail.com</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">📞 Phone numbers:</span>
-                  <span>+855 777 888</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="mb-6">
-              <h4 className="font-bold text-gray-800 mb-3">Requirement</h4>
-              <div className="bg-blue-400 p-4 rounded-lg text-white">
-                <ol className="list-decimal list-inside space-y-1 text-sm">
-                  <li>Must be in design Field</li>
-                  <li>18 years up</li>
-                  <li>Open Mind</li>
-                  <li>Good Communication</li>
-                  <li>Can speak English</li>
-                </ol>
-              </div>
-            </div>
-
-            <div className="mb-6">
-              <h4 className="font-bold text-gray-800 mb-3">Benefit</h4>
-              <div className="bg-blue-400 p-4 rounded-lg text-white">
-                <ol className="list-decimal list-inside space-y-1 text-sm">
-                  <li>Certification</li>
-                  <li>Trip to KomPot three days</li>
-                  <li>Networking</li>
-                </ol>
-              </div>
-            </div>
-
-            <div className="bg-blue-500 p-6 rounded-lg text-white">
-              <div className="flex items-center justify-between mb-4">
-                <h4 className="text-lg font-bold">VOLUNTEER NEEDED</h4>
-                <div className="bg-white text-blue-500 px-3 py-1 rounded-full text-xs font-medium">YOUR LOGO</div>
-              </div>
-
-              <div className="flex items-center gap-4">
-                <Image src="/smiling-volunteer-blue-shirt.png" alt="Volunteer" width={80} height={80} className="w-20 h-20 rounded-lg object-cover" />
-              </div>
-            </div>
-          </div>
-        </div>
+        <button onClick={handleBack} className="mt-4 text-gray-700 underline">← Back</button>
       </div>
     </div>
   )
 }
+
+// ----------------- Reusable Components -----------------
+interface InputFieldProps {
+  label: string
+  value: string
+  onChange: (value: string) => void
+  type?: string
+}
+const InputField: React.FC<InputFieldProps> = ({ label, value, onChange, type = "text" }) => (
+  <div>
+    <label className="block text-sm font-medium text-gray-700 mb-1">{label} <span className="text-red-500">*</span></label>
+    <Input type={type} value={value} onChange={(e) => onChange(e.target.value)} className="w-full" required />
+  </div>
+)
+
+interface TextareaFieldProps {
+  label: string
+  value: string
+  onChange: (value: string) => void
+}
+const TextareaField: React.FC<TextareaFieldProps> = ({ label, value, onChange }) => (
+  <div>
+    <label className="block text-sm font-medium text-gray-700 mb-1">{label} <span className="text-red-500">*</span></label>
+    <Textarea value={value} onChange={(e) => onChange(e.target.value)} className="w-full h-24 resize-none" placeholder="Please type your answer here..." required />
+  </div>
+)
+
+interface SelectFieldProps {
+  label: string
+  value: string
+  onChange: (value: string) => void
+}
+const SelectField: React.FC<SelectFieldProps> = ({ label, value, onChange }) => (
+  <div>
+    <label className="block text-sm font-medium text-gray-700 mb-1">{label} <span className="text-red-500">*</span></label>
+    <Select value={value} onValueChange={(val) => onChange(val)}>
+      <SelectTrigger className="w-full"><SelectValue placeholder="Select gender" /></SelectTrigger>
+      <SelectContent>
+        <SelectItem value="male">Male</SelectItem>
+        <SelectItem value="female">Female</SelectItem>
+        <SelectItem value="other">Other</SelectItem>
+      </SelectContent>
+    </Select>
+  </div>
+)

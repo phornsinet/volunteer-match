@@ -3,8 +3,8 @@ import type React from "react"
 import { Button } from "@/components/ui/button"
 import { MapPin, ChevronLeft, ChevronRight, Clock10Icon, HomeIcon, WorkflowIcon } from "lucide-react"
 import { useRef, useState, useEffect } from "react"
-import { AuthProvider, useAuth } from "@/action/auth.tsx";
 import { supabase } from "@/lib/supabase.js";
+import { AuthProvider, useAuth } from "@/action/auth"
 
 import Image from "next/image";
 

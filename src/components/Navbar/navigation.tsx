@@ -6,9 +6,10 @@ import Image from "next/image";
 import { useAuth } from "@/action/auth";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "../../../utils/supabase/client";
 
 export default function Navigation() {
+  const supabase = createClient();
   const { session, loading, signOut } = useAuth() ?? {};
   const pathname = usePathname();
   const [userRole, setUserRole] = useState<string | null>(null);
@@ -16,11 +17,18 @@ export default function Navigation() {
   useEffect(() => {
     async function getUserRole() {
       if (session?.user) {
-        const userRoleFromMetadata = session.user.user_metadata?.user_role;
-        if (userRoleFromMetadata) {
-          setUserRole(userRoleFromMetadata);
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('user_role')
+          .eq('id', session.user.id)
+          .single();
+
+        if (profileError) {
+          console.error("Error fetching user role:", profileError);
+          setUserRole(null);
+        } else if (profileData) {
+          setUserRole(profileData.user_role);
         } else {
-          console.error("User role not found in metadata.");
           setUserRole(null);
         }
       } else {
@@ -29,7 +37,7 @@ export default function Navigation() {
     }
 
     getUserRole();
-  }, [session]);
+  }, [session, supabase]);
 
   if (loading) {
     return null;
@@ -38,7 +46,7 @@ export default function Navigation() {
   const accountLink = userRole === 'volunteer' 
     ? '/account-volunteer' 
     : userRole === 'organization' 
-    ? '/account-organazer' 
+    ? '/account-organizer' 
     : '/login';
 
   const handleLogout = async () => {
@@ -148,7 +156,7 @@ export default function Navigation() {
                   <Link href={accountLink}>
                     <Button
                       className={
-                        (pathname === "/account-volunteer" || pathname === "/account-organization")
+                        (pathname === "/account-volunteer" || pathname === "/account-organizer")
                           ? "bg-red-400 hover:bg-red-500 text-white px-6"
                           : "bg-white hover:bg-gray-300 text-gray-700 px-6"
                       }

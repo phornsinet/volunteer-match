@@ -6,11 +6,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useState, useEffect, useRef } from "react"
 import { User } from "lucide-react"
 import Image from "next/image"
-import { supabase } from "@/lib/supabase";
+import { createClient } from "../../../utils/supabase/client";
 import toast from "react-hot-toast";
-import { getAccountDetails, updateAccountDetails } from "@/action/profiles"; // Changed from AccountDetails
+import { getAccountDetails, updateAccountDetails } from "@/components/profiles"; // Changed from AccountDetails
 
 export default function AccountPage() {
+  const supabase = createClient();
+  console.log("AccountPage (Organizer) component rendering.");
   const [userInfo, setUserInfo] = useState({
     firstName: "Sinet",
     lastName: "Phorn",
@@ -27,10 +29,14 @@ export default function AccountPage() {
   const [isEditing, setIsEditing] = useState(false)
 
   useEffect(() => {
+    console.log("AccountPage (Organizer) useEffect triggered.");
     const fetchProfile = async () => {
+      console.log("Fetching user session...");
       const { data: { user } } = await supabase.auth.getUser();
+      console.log("User session data:", user);
       if (user) {
         try {
+            console.log("User authenticated. Fetching profile details...");
             const data = await getAccountDetails(user.id);
 
             if (data) {
@@ -43,6 +49,7 @@ export default function AccountPage() {
                 profileImageUrl: data.avatar_url || null,
               });
               setProfileImage(data.avatar_url || null);
+              console.log("Updated userInfo after fetch:", userInfo);
             } else {
               // If no profile found, reset to initial empty state
               setUserInfo({
@@ -55,11 +62,14 @@ export default function AccountPage() {
                 profileImageUrl: null,
               });
               setProfileImage(null);
+              console.log("Reset userInfo to empty state:", userInfo);
             }
         } catch (error) {
             console.error("Failed to fetch profile:", error);
             toast.error("Failed to load profile data.");
         }
+      } else {
+        console.log("User not authenticated for profile fetch.");
       }
     };
     fetchProfile();

@@ -1,11 +1,9 @@
-// src/action/auth.tsx
-
 "use client";
 
 import type { ReactNode } from "react";
 import { createContext, useContext, useEffect, useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "../../utils/supabase/client";
 import toast from "react-hot-toast";
 import type { Session, AuthError, User } from "@supabase/supabase-js";
 
@@ -20,6 +18,7 @@ type AuthContextType = {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const supabase = createClient();
   const router = useRouter();
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
@@ -31,7 +30,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setLoading(false);
         if (event === "SIGNED_OUT") {
           toast("Signed out");
-          router.push("/");
+          // router.push("/"); // Temporarily disabled redirect
         }
       }
     );

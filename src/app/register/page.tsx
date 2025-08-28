@@ -11,9 +11,10 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@supabase/supabase-js";
 
 export default function RegisterPage() {
+  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
   const router = useRouter();
   const [formData, setFormData] = useState({
     fullName: "",
@@ -107,43 +108,54 @@ export default function RegisterPage() {
     }
 
     setErrors(newErrors);
-    return isValid;
+    return { isValid, newErrors };
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!validateForm()) {
-      toast.error("Please fix the errors in the form.");
+    const { isValid, newErrors } = validateForm();
+
+    if (!isValid) {
+      const errorMessages = Object.values(newErrors).filter(msg => msg !== '');
+      if (errorMessages.length > 0) {
+        toast.error(`Please fix the following issues:\n${errorMessages.join('\n')}`);
+      } else {
+        toast.error("Please fix the errors in the form.");
+      }
       return;
     }
 
     try {
+      const nameParts = formData.fullName.trim().split(/\s+/);
+      const firstName = nameParts.shift() || "";
+      const lastName = nameParts.join(" ");
+
       const { data, error } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
         options: {
           data: {
-            full_name: formData.fullName,
+            first_name: firstName,
+            last_name: lastName,
             phone_number: formData.phoneNumber,
             user_role: formData.userRole,
-          }
-        }
+          },
+        },
       });
 
       if (error) {
-        // Show Supabase API error message
         toast.error(error.message);
-      } else if (data.user) {
-        // Registration successful
-        toast.success("Registration successful! Check your email for a confirmation link.");
-
-        // Conditionally redirect based on user role
-        router.push('/');
+      } else {
+        toast.success("Registration successful! Redirecting...");
+        if (formData.userRole === "organization") {
+          router.push("/find-organization");
+        } else {
+          router.push("/find-opportunities");
+        }
       }
     } catch (error) {
       console.error('Supabase registration error:', error);
-      // Show generic error message for unexpected errors
       toast.error('An unexpected error occurred. Please try again.');
     }
   };
@@ -155,7 +167,7 @@ export default function RegisterPage() {
           <div className="bg-red-400 rounded-lg p-8 shadow-lg">
             <div className="text-center mb-8">
               <h1 className="text-3xl font-bold text-black mb-2">Register</h1>
-              <p className="text-gray-700">Please enter your information</p>
+              <p className="text-gray-200">Please enter your information</p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -172,7 +184,7 @@ export default function RegisterPage() {
                   placeholder="Enter your full name or organization name"
                   required
                 />
-                {errors.fullName && <p className="text-gray-300 text-xs mt-1">{errors.fullName}</p>}
+                {errors.fullName && <p className="text-white text-xs mt-1">{errors.fullName}</p>}
               </div>
 
               <div>
@@ -188,7 +200,7 @@ export default function RegisterPage() {
                   placeholder="This will be used for login and communication"
                   required
                 />
-                {errors.email && <p className="text-gray-300 text-xs mt-1">{errors.email}</p>}
+                {errors.email && <p className="text-white text-xs mt-1">{errors.email}</p>}
               </div>
 
               <div>
@@ -204,7 +216,7 @@ export default function RegisterPage() {
                   placeholder="Please provide a contact phone number"
                   required
                 />
-                {errors.phoneNumber && <p className="text-gray-300 text-xs mt-1">{errors.phoneNumber}</p>}
+                {errors.phoneNumber && <p className="text-white text-xs mt-1">{errors.phoneNumber}</p>}
               </div>
 
               <div>
@@ -220,7 +232,7 @@ export default function RegisterPage() {
                   placeholder="Password must be at least 6 characters long"
                   required
                 />
-                {errors.password && <p className="text-gray-300 text-xs mt-1">{errors.password}</p>}
+                {errors.password && <p className="text-white text-xs mt-1">{errors.password}</p>}
               </div>
 
               <div>
@@ -236,7 +248,7 @@ export default function RegisterPage() {
                   placeholder="Please enter the same password as above"
                   required
                 />
-                {errors.confirmPassword && <p className="text-gray-300 text-xs mt-1">{errors.confirmPassword}</p>}
+                {errors.confirmPassword && <p className="text-white text-xs mt-1">{errors.confirmPassword}</p>}
               </div>
 
               <div>
@@ -252,7 +264,7 @@ export default function RegisterPage() {
                     <SelectItem value="organization">Organization</SelectItem>
                   </SelectContent>
                 </Select>
-                {errors.userRole && <p className="text-gray-300 text-xs mt-1">{errors.userRole}</p>}
+                {errors.userRole && <p className="text-white text-xs mt-1">{errors.userRole}</p>}
               </div>
 
               <Button
