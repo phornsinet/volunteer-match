@@ -5,7 +5,6 @@ import { MapPin, ChevronLeft, ChevronRight, Clock10Icon, HomeIcon, WorkflowIcon 
 import Link from "next/link"
 import { useRef, useState, useEffect } from "react"
 import Image from "next/image";
-import { useAuth } from "@/action/auth";
 import toast, { Toaster } from "react-hot-toast";
 import { createClient } from "../../../utils/supabase/client"
 
@@ -25,7 +24,7 @@ interface Opportunity {
 export default function Card() {
   const supabase = createClient();
   const cardContainerRef = useRef<HTMLDivElement>(null)
-  const { session } = useAuth() ?? {};
+  // const { session } = useAuth() ?? {}; // session is not used
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -53,7 +52,7 @@ export default function Card() {
     };
 
     fetchOpportunities();
-  }, []);
+  }, [supabase]);
 
   const scrollLeft = () => {
     if (cardContainerRef.current) {

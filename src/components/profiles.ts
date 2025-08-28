@@ -96,8 +96,12 @@ export async function getAccountDetails(accountId: string): Promise<AccountDetai
     if (error) throw error;
 
     return data && data.length > 0 ? (data[0] as AccountDetailsData) : null;
-  } catch (error: any) {
-    console.error("Error in getAccountDetails:", error);
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      console.error("Error in getAccountDetails:", error.message);
+    } else {
+      console.error("Error in getAccountDetails:", error);
+    }
     throw error;
   }
 }
@@ -112,8 +116,12 @@ export async function updateAccountDetails(accountId: string, updates: Partial<A
     if (error) throw error;
 
     console.log("Profile upserted successfully for id:", accountId);
-  } catch (error: any) {
-    console.error("Error in updateAccountDetails:", error);
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      console.error("Error in updateAccountDetails:", error.message);
+    } else {
+      console.error("Error in updateAccountDetails:", error);
+    }
     throw error;
   }
 }
@@ -138,8 +146,12 @@ export async function getOrganizerOpportunities(organizerEmail: string): Promise
 
     console.log("Returning opportunities data:", data || []);
     return data || [];
-  } catch (error: any) {
-    console.error("Error in getOrganizerOpportunities:", error);
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      console.error("Error in getOrganizerOpportunities:", error.message);
+    } else {
+      console.error("Error in getOrganizerOpportunities:", error);
+    }
     throw error;
   }
 }
@@ -164,8 +176,12 @@ export async function getOrganizerOpportunitiesByUserId(userId: string): Promise
 
     console.log("Returning opportunities data by user_id:", data || []);
     return data || [];
-  } catch (error: any) {
-    console.error("Error in getOrganizerOpportunitiesByUserId:", error);
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      console.error("Error in getOrganizerOpportunitiesByUserId:", error.message);
+    } else {
+      console.error("Error in getOrganizerOpportunitiesByUserId:", error);
+    }
     throw error;
   }
 }
@@ -188,8 +204,12 @@ export async function getAllOpportunities(): Promise<OpportunityData[]> {
     }
 
     return data || [];
-  } catch (error: any) {
-    console.error("Error in getAllOpportunities:", error);
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      console.error("Error in getAllOpportunities:", error.message);
+    } else {
+      console.error("Error in getAllOpportunities:", error);
+    }
     throw error;
   }
 }
@@ -223,8 +243,12 @@ export async function getUserApplications(userId: string): Promise<ApplicationDa
 
     console.log("Returning applications data:", data || []);
     return data || [];
-  } catch (error: any) {
-    console.error("Error in getUserApplications:", error);
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      console.error("Error in getUserApplications:", error.message);
+    } else {
+      console.error("Error in getUserApplications:", error);
+    }
     throw error;
   }
 }
@@ -275,8 +299,12 @@ export async function applyForOpportunity(userId: string, opportunityId: string)
     }
 
     return data;
-  } catch (error: any) {
-    console.error("Error in applyForOpportunity:", error);
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      console.error("Error in applyForOpportunity:", error.message);
+    } else {
+      console.error("Error in applyForOpportunity:", error);
+    }
     throw error;
   }
 }
@@ -310,8 +338,12 @@ export async function createTestOpportunity(userEmail: string, userId: string): 
     }
 
     return data;
-  } catch (error: any) {
-    console.error("Error in createTestOpportunity:", error);
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      console.error("Error in createTestOpportunity:", error.message);
+    } else {
+      console.error("Error in createTestOpportunity:", error);
+    }
     throw error;
   }
 }
@@ -401,8 +433,12 @@ export async function getOrganizerApplications(organizerUserId: string): Promise
 
     console.log("Returning transformed organizer applications data:", transformedData);
     return transformedData;
-  } catch (error: any) {
-    console.error("Error in getOrganizerApplications:", error);
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      console.error("Error in getOrganizerApplications:", error.message);
+    } else {
+      console.error("Error in getOrganizerApplications:", error);
+    }
     throw error;
   }
 }
@@ -424,8 +460,12 @@ export async function updateApplicationStatus(applicationId: string, status: str
 
     console.log("Application status updated successfully");
     return true;
-  } catch (error: any) {
-    console.error("Error in updateApplicationStatus:", error);
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      console.error("Error in updateApplicationStatus:", error.message);
+    } else {
+      console.error("Error in updateApplicationStatus:", error);
+    }
     throw error;
   }
 }
@@ -449,8 +489,12 @@ export async function getAllGeneralApplications(): Promise<GeneralApplicationDat
 
     console.log("Returning general applications data:", data || []);
     return data || [];
-  } catch (error: any) {
-    console.error("Error in getAllGeneralApplications:", error);
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      console.error("Error in getAllGeneralApplications:", error.message);
+    } else {
+      console.error("Error in getAllGeneralApplications:", error);
+    }
     throw error;
   }
 }
@@ -476,8 +520,12 @@ export async function updateGeneralApplicationStatus(applicationId: string, stat
 
     console.log("General application status updated successfully");
     return true;
-  } catch (error: any) {
-    console.error("Error in updateGeneralApplicationStatus:", error);
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      console.error("Error in updateGeneralApplicationStatus:", error.message);
+    } else {
+      console.error("Error in updateGeneralApplicationStatus:", error);
+    }
     throw error;
   }
 }

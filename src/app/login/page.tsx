@@ -7,10 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { useAuth } from "@/action/auth";
 import toast from "react-hot-toast";
-import { createClient } from "../../../utils/supabase/client";
 
 export default function LoginPage() {
-  const supabase = createClient();
   const router = useRouter();
   const auth = useAuth();
 

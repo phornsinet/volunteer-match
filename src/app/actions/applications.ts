@@ -53,8 +53,9 @@ export async function submitApplication(opportunityId: string) {
     revalidatePath('/account-organizer')
     
     return { success: true, application: data }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error in submitApplication:', error)
-    return { success: false, error: error.message }
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred'
+    return { success: false, error: errorMessage }
   }
 }

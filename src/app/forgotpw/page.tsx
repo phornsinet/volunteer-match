@@ -5,14 +5,11 @@ import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from 'lucide-react';
-import { useAuth } from "@/action/auth"; // Keep useAuth for consistency, though signIn is not used
-import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 
 import { supabase } from "@/lib/supabase";
 
 export default function ForgotPasswordPage() {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

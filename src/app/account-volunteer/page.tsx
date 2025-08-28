@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -144,9 +145,10 @@ export default function AccountPage() {
 
       toast.success("Profile saved successfully!");
       setIsEditing(false);
-    } catch (err: any) {
-      console.error("Submission error:", err.message);
-      toast.error(`Failed to save profile: ${err.message}`);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred'
+      console.error("Submission error:", errorMessage);
+      toast.error(`Failed to save profile: ${errorMessage}`);
     }
   };
 
@@ -175,8 +177,9 @@ export default function AccountPage() {
       setProfileImage(publicUrl);
       setUserInfo(prev => ({ ...prev, profileImageUrl: publicUrl }));
       toast.success("Profile image updated!");
-    } catch (error: any) {
-      toast.error(`Failed to update profile image: ${error.message}`);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred'
+      toast.error(`Failed to update profile image: ${errorMessage}`);
     }
   };
 
@@ -206,7 +209,13 @@ export default function AccountPage() {
                 onClick={() => isEditing && imageInputRef.current?.click()}
               >
                 {profileImage ? (
-                  <img src={profileImage} alt="Profile" className="w-full h-full object-cover" />
+                  <Image 
+                    src={profileImage} 
+                    alt="Profile" 
+                    width={80} 
+                    height={80} 
+                    className="w-full h-full object-cover" 
+                  />
                 ) : (
                   <User className="w-12 h-12 text-white" />
                 )}

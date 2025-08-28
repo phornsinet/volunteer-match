@@ -92,9 +92,10 @@ export default function ApplicationPage() {
         experience: "",
         cv: null,
       })
-    } catch (err: any) {
-      console.error("Submission error:", err.message)
-      alert(`❌ Submission failed: ${err.message}`)
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred'
+      console.error("Submission error:", errorMessage)
+      alert(`❌ Submission failed: ${errorMessage}`)
     }
   }
 

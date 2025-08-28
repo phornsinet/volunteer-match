@@ -43,7 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       authListener?.subscription?.unsubscribe();
     };
-  }, [router]);
+  }, [router, supabase]);
 
   const signIn = useCallback(async (email: string, password: string) => {
     const result = await supabase.auth.signInWithPassword({ email, password });
@@ -51,11 +51,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       toast.error(result.error.message);
     }
     return result;
-  }, []);
+  }, [supabase]);
 
   const signOut = useCallback(async () => {
     return supabase.auth.signOut();
-  }, []);
+  }, [supabase]);
 
   const value = useMemo(() => ({
     session,

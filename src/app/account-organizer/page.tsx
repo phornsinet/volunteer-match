@@ -3,12 +3,12 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { User } from "lucide-react"
 import Image from "next/image"
 import { createClient } from "../../../utils/supabase/client";
 import toast from "react-hot-toast";
-import { getAccountDetails, updateAccountDetails, getOrganizerOpportunities, getOrganizerOpportunitiesByUserId, getAllOpportunities, createTestOpportunity, OpportunityData, getOrganizerApplications, updateApplicationStatus, OrganizerApplicationData, getAllGeneralApplications, updateGeneralApplicationStatus, GeneralApplicationData } from "@/components/profiles"; // Updated imports
+import { getAccountDetails, updateAccountDetails, getOrganizerOpportunitiesByUserId, getAllOpportunities, createTestOpportunity, OpportunityData, getAllGeneralApplications, updateGeneralApplicationStatus, GeneralApplicationData, AccountDetailsData } from "@/components/profiles"; // Updated imports
 
 export default function AccountPage() {
   const supabase = createClient();
@@ -54,7 +54,7 @@ export default function AccountPage() {
   }
 
   // Function to refresh events
-  const refreshEvents = async () => {
+  const refreshEvents = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
       console.log("Refreshing events for user ID:", user.id);
@@ -72,7 +72,7 @@ export default function AccountPage() {
         setIsLoadingEvents(false);
       }
     }
-  }
+  }, [supabase])
 
   // Function to refresh applications
   const refreshApplications = async () => {
@@ -195,7 +195,7 @@ export default function AccountPage() {
       }
     };
     fetchProfile();
-  }, []);
+  }, [supabase, userInfo]);
 
   // Add effect to refresh when page becomes visible (when navigating back)
   useEffect(() => {
@@ -210,7 +210,7 @@ export default function AccountPage() {
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [userInfo.email]);
+  }, [userInfo.email, refreshEvents]);
 
   // General applicants from applications table (real data from database)
   const [generalApplicants, setGeneralApplicants] = useState<GeneralApplicationData[]>([])
@@ -239,7 +239,7 @@ export default function AccountPage() {
     }
 
     try {
-      const updates: any = {
+      const updates: Partial<AccountDetailsData> = {
         first_name: userInfo.firstName,
         last_name: userInfo.lastName,
         email: userInfo.email,
@@ -257,9 +257,14 @@ export default function AccountPage() {
 
       toast.success("Profile saved successfully!");
       setIsEditing(false);
-    } catch (error: any) {
-      console.error("Error saving profile:", error);
-      toast.error(`Failed to save profile: ${error.message}`);
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        console.error("Error saving profile:", error.message);
+        toast.error(`Failed to save profile: ${error.message}`);
+      } else {
+        console.error("Error saving profile:", error);
+        toast.error("Failed to save profile: Unknown error");
+      }
     }
   };
 
@@ -314,9 +319,14 @@ export default function AccountPage() {
       await updateAccountDetails(user.id, { avatar_url: publicUrl });
 
       toast.success("Profile image updated successfully!");
-    } catch (error: any) {
-            console.error("Error uploading or updating image:", error);
-      toast.error("Failed to update profile image.");
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        console.error("Error uploading or updating image:", error.message);
+        toast.error(`Failed to update profile image: ${error.message}`);
+      } else {
+        console.error("Error uploading or updating image:", error);
+        toast.error("Failed to update profile image: Unknown error");
+      }
     }
   };
 
@@ -491,7 +501,7 @@ export default function AccountPage() {
                     ) : organizerEvents.length === 0 ? (
                       <div className="flex flex-col justify-center items-center h-full text-center">
                         <div className="text-gray-500 mb-2">No events created yet</div>
-                        <div className="text-xs text-gray-400">Click "Create Test Event" to add a sample event</div>
+                        <div className="text-xs text-gray-400">Click &quot;Create Test Event&quot; to add a sample event</div>
                       </div>
                     ) : (
                       organizerEvents.map((event) => (

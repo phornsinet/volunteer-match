@@ -53,7 +53,7 @@ function Card1Content() {
     };
 
     fetchOpportunities();
-  }, []);
+  }, [supabase]);
 
   useEffect(() => {
     const checkUserRole = async () => {
@@ -75,7 +75,7 @@ function Card1Content() {
     };
 
     checkUserRole();
-  }, [auth]);
+  }, [auth, supabase]);
 
   const scrollLeft = () => {
     if (cardContainerRef.current) {
