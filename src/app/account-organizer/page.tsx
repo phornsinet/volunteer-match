@@ -8,7 +8,7 @@ import { User } from "lucide-react"
 import Image from "next/image"
 import { createClient } from "../../../utils/supabase/client";
 import toast from "react-hot-toast";
-import { getAccountDetails, updateAccountDetails } from "@/components/profiles"; // Changed from AccountDetails
+import { getAccountDetails, updateAccountDetails, getOrganizerOpportunities, getOrganizerOpportunitiesByUserId, getAllOpportunities, createTestOpportunity, OpportunityData, getOrganizerApplications, updateApplicationStatus, OrganizerApplicationData } from "@/components/profiles"; // Updated imports
 
 export default function AccountPage() {
   const supabase = createClient();
@@ -17,6 +17,7 @@ export default function AccountPage() {
     firstName: "Sinet",
     lastName: "Phorn",
     email: "phorn.sinet24@kit.edu.kh",
+    phoneNumber: "",
     password: "",
     confirmPassword: "",
     profileImageUrl: null as string | null,
@@ -25,8 +26,73 @@ export default function AccountPage() {
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
 
+  // Events created by the organizer (will be fetched from database)
+  const [organizerEvents, setOrganizerEvents] = useState<OpportunityData[]>([])
+  const [isLoadingEvents, setIsLoadingEvents] = useState(true)
+
   const [applicantStatuses, setApplicantStatuses] = useState<{ [key: string]: string }>({})
   const [isEditing, setIsEditing] = useState(false)
+
+  // Helper function to format date
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+      day: 'numeric', 
+      month: 'short', 
+      year: 'numeric' 
+    });
+  }
+
+  // Helper function to determine status (you can customize this logic)
+  const getEventStatus = (createdAt: string) => {
+    const createdDate = new Date(createdAt);
+    const today = new Date();
+    const daysDiff = Math.floor((today.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (daysDiff < 7) return "New";
+    return "Active";
+  }
+
+  // Function to refresh events
+  const refreshEvents = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      console.log("Refreshing events for user ID:", user.id);
+      setIsLoadingEvents(true);
+      try {
+        // Use user ID instead of email for more reliable querying
+        const events = await getOrganizerOpportunitiesByUserId(user.id);
+        console.log("Refreshed events:", events);
+        setOrganizerEvents(events);
+        toast.success("Events refreshed!");
+      } catch (error) {
+        console.error("Failed to refresh events:", error);
+        toast.error("Failed to refresh events");
+      } finally {
+        setIsLoadingEvents(false);
+      }
+    }
+  }
+
+  // Function to refresh applications
+  const refreshApplications = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      console.log("Refreshing applications for organizer ID:", user.id);
+      setIsLoadingApplicants(true);
+      try {
+        const applications = await getOrganizerApplications(user.id);
+        console.log("Refreshed applications:", applications);
+        setVolunteerApplicants(applications);
+        toast.success("Applications refreshed!");
+      } catch (error) {
+        console.error("Failed to refresh applications:", error);
+        toast.error("Failed to refresh applications");
+      } finally {
+        setIsLoadingApplicants(false);
+      }
+    }
+  }
 
   useEffect(() => {
     console.log("AccountPage (Organizer) useEffect triggered.");
@@ -38,64 +104,120 @@ export default function AccountPage() {
         try {
             console.log("User authenticated. Fetching profile details...");
             const data = await getAccountDetails(user.id);
+            console.log("Profile data received:", data);
 
             if (data) {
               setUserInfo({
                 firstName: data.first_name || "",
                 lastName: data.last_name || "",
                 email: data.email || "",
+                phoneNumber: data.phone_number || "",
                 password: "", // Passwords are not fetched for security
                 confirmPassword: "",
                 profileImageUrl: data.avatar_url || null,
               });
               setProfileImage(data.avatar_url || null);
               console.log("Updated userInfo after fetch:", userInfo);
+
+              // Fetch organizer's events using their user ID (more reliable than email)
+              console.log("User ID for events query:", user.id);
+              
+              if (user.id) {
+                console.log("Fetching organizer's events using user ID:", user.id);
+                setIsLoadingEvents(true);
+                try {
+                  // Debug: First check what's in the database
+                  const allOpportunities = await getAllOpportunities();
+                  console.log("All opportunities in database:", allOpportunities);
+                  
+                  const events = await getOrganizerOpportunitiesByUserId(user.id);
+                  console.log("Fetched events for user ID", user.id, ":", events);
+                  setOrganizerEvents(events);
+                  
+                  // Also fetch applications for the organizer
+                  await refreshApplications();
+                } catch (eventError) {
+                  console.error("Failed to fetch events:", eventError);
+                  toast.error("Failed to load events data.");
+                } finally {
+                  setIsLoadingEvents(false);
+                }
+              } else {
+                console.log("No user ID available to fetch events");
+                setIsLoadingEvents(false);
+              }
             } else {
-              // If no profile found, reset to initial empty state
+              console.log("No profile found in database, using auth user data");
+              // If no profile found, use auth user data and still try to fetch events
+              const authEmail = user.email || "";
               setUserInfo({
                 firstName: "",
                 lastName: "",
-                email: user.email || "", // prefill email from auth user
+                email: authEmail,
                 phoneNumber: "",
                 password: "",
                 confirmPassword: "",
                 profileImageUrl: null,
               });
               setProfileImage(null);
-              console.log("Reset userInfo to empty state:", userInfo);
+              console.log("Reset userInfo to empty state but using auth email:", authEmail);
+              
+              // Try to fetch events using auth user ID
+              if (user.id) {
+                console.log("Fetching organizer's events using auth user ID:", user.id);
+                setIsLoadingEvents(true);
+                try {
+                  // Debug: First check what's in the database
+                  const allOpportunities = await getAllOpportunities();
+                  console.log("All opportunities in database:", allOpportunities);
+                  
+                  const events = await getOrganizerOpportunitiesByUserId(user.id);
+                  console.log("Fetched events with auth user ID:", events);
+                  setOrganizerEvents(events);
+                  
+                  // Also fetch applications for the organizer
+                  await refreshApplications();
+                } catch (eventError) {
+                  console.error("Failed to fetch events with auth user ID:", eventError);
+                  toast.error("Failed to load events data.");
+                } finally {
+                  setIsLoadingEvents(false);
+                }
+              } else {
+                setIsLoadingEvents(false);
+              }
             }
         } catch (error) {
             console.error("Failed to fetch profile:", error);
             toast.error("Failed to load profile data.");
+            setIsLoadingEvents(false);
         }
       } else {
         console.log("User not authenticated for profile fetch.");
+        setIsLoadingEvents(false);
       }
     };
     fetchProfile();
   }, []);
 
-  const posts = [
-    { id: "1", name: "YouLogo", date: "23 Jan, 2025" },
-    { id: "2", name: "Graphic Design", date: "23 Jan, 2025" },
-    { id: "3", name: "Your Voice", date: "23 Jan, 2025" },
-    { id: "4", name: "Web Development", date: "24 Jan, 2025" },
-    { id: "5", name: "Mobile App Design", date: "25 Jan, 2025" },
-    { id: "6", name: "Data Science Project", date: "26 Jan, 2025" },
-  ]
+  // Add effect to refresh when page becomes visible (when navigating back)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        console.log("Page became visible, refreshing events...");
+        refreshEvents();
+      }
+    };
 
-  const applicants = [
-    { id: "1", name: "ByeWind", avatar: "/placeholder.svg?height=40&width=40" },
-    { id: "2", name: "Natali Craig", avatar: "/placeholder.svg?height=40&width=40" },
-    { id: "3", name: "Drew Cano", avatar: "/placeholder.svg?height=40&width=40" },
-    { id: "4", name: "Orlando Diggs", avatar: "/placeholder.svg?height=40&width=40" },
-    { id: "5", name: "Andi Lane", avatar: "/placeholder.svg?height=40&width=40" },
-    { id: "6", name: "ByeWind", avatar: "/placeholder.svg?height=40&width=40" },
-    { id: "7", name: "Natali Craig", avatar: "/placeholder.svg?height=40&width=40" },
-    { id: "8", name: "John Doe", avatar: "/placeholder.svg?height=40&width=40" },
-    { id: "9", name: "Jane Smith", avatar: "/placeholder.svg?height=40&width=40" },
-    { id: "10", name: "Peter Jones", avatar: "/placeholder.svg?height=40&width=40" },
-  ]
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [userInfo.email]);
+
+  // Volunteer applicants for organizer's events (real data from database)
+  const [volunteerApplicants, setVolunteerApplicants] = useState<OrganizerApplicationData[]>([])
+  const [isLoadingApplicants, setIsLoadingApplicants] = useState(true)
 
   const handleInputChange = (field: string, value: string) => {
     setUserInfo((prev) => ({
@@ -142,11 +264,18 @@ export default function AccountPage() {
     }
   };
 
-  const handleStatusChange = (applicantId: string, status: string) => {
-    setApplicantStatuses((prev) => ({
-      ...prev,
-      [applicantId]: status,
-    }))
+  const handleStatusChange = async (applicantId: string, status: string) => {
+    try {
+      await updateApplicationStatus(applicantId, status);
+      setApplicantStatuses((prev) => ({
+        ...prev,
+        [applicantId]: status,
+      }));
+      toast.success(`Application status updated to ${status}`);
+    } catch (error) {
+      console.error("Error updating application status:", error);
+      toast.error("Failed to update application status");
+    }
   }
 
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -307,72 +436,163 @@ export default function AccountPage() {
                 )}
               </div>
             </div>
-            {/* Right Column - Posts Section */}
+            {/* Right Column - Events Section */}
             <div>
               <div className="space-y-6">
-                {/* Posts List */}
+                {/* Events Created by Organizer */}
                 <div>
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-lg font-semibold text-gray-900">My Events</h3>
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={refreshEvents}
+                        className="text-xs bg-green-500 hover:bg-green-600 text-white px-3 py-1"
+                      >
+                        Refresh
+                      </Button>
+                      <Button
+                        onClick={async () => {
+                          console.log("Creating test event...");
+                          const { data: { user } } = await supabase.auth.getUser();
+                          if (user?.email && user?.id) {
+                            try {
+                              await createTestOpportunity(user.email, user.id);
+                              // Refresh events after creating test event
+                              await refreshEvents();
+                            } catch (error) {
+                              console.error("Failed to create test event:", error);
+                              toast.error("Failed to create test event");
+                            }
+                          }
+                        }}
+                        className="text-xs bg-blue-500 hover:bg-blue-600 text-white px-3 py-1"
+                      >
+                        Create Test Event
+                      </Button>
+                    </div>
+                  </div>
                   <div className="flex justify-between items-center text-sm font-medium text-gray-600 mb-4">
-                    <span>Name</span>
-                    <span>Date</span>
+                    <span>Event Title</span>
+                    <div className="flex gap-4">
+                      <span>Location</span>
+                      <span>Date Created</span>
+                    </div>
                   </div>
                   <div className="space-y-3 h-[200px] overflow-y-scroll">
-                    {posts.map((post) => (
-                      <div
-                        key={post.id}
-                        className="bg-sky-300 rounded-lg p-4 flex justify-between items-center cursor-pointer hover:bg-sky-400 transition-colors"
-                      >
-                        <span className="font-medium">{post.name}</span>
-                        <span className="text-sm">{post.date}</span>
+                    {isLoadingEvents ? (
+                      <div className="flex justify-center items-center h-full">
+                        <div className="text-gray-500">Loading events...</div>
                       </div>
-                    ))}
+                    ) : organizerEvents.length === 0 ? (
+                      <div className="flex flex-col justify-center items-center h-full text-center">
+                        <div className="text-gray-500 mb-2">No events created yet</div>
+                        <div className="text-xs text-gray-400">Click "Create Test Event" to add a sample event</div>
+                      </div>
+                    ) : (
+                      organizerEvents.map((event) => (
+                        <div
+                          key={event.id}
+                          className="bg-sky-300 rounded-lg p-4 flex justify-between items-center cursor-pointer hover:bg-sky-400 transition-colors"
+                        >
+                          <div className="flex flex-col">
+                            <span className="font-medium">{event.title}</span>
+                            <span className="text-xs text-gray-600">Status: {getEventStatus(event.created_at)}</span>
+                            <span className="text-xs text-gray-500">Organizer: {event.organizer_name}</span>
+                          </div>
+                          <div className="flex gap-4 text-sm">
+                            <span className="font-medium">{event.location}</span>
+                            <span>{formatDate(event.created_at)}</span>
+                          </div>
+                        </div>
+                      ))
+                    )}
                   </div>
                   <div className="text-center mt-4">
                     <Button variant="ghost" className="text-gray-600 hover:text-gray-800">
                       See more
                     </Button>
                   </div>
+                  
+                  {/* Debug Info */}
+                  <div className="mt-4 p-3 bg-gray-100 rounded text-xs space-y-1">
+                    <div><strong>Debug Info:</strong></div>
+                    <div>Current User Email: {userInfo.email}</div>
+                    <div>Auth User Email: {userInfo.email}</div>
+                    <div>Events Count: {organizerEvents.length}</div>
+                    <div>Loading: {isLoadingEvents ? 'Yes' : 'No'}</div>
+                    <div>
+                      <Button
+                        onClick={async () => {
+                          const allEvents = await getAllOpportunities();
+                          console.log("All events in database:", allEvents);
+                          alert(`Total events in database: ${allEvents.length}. Check console for details.`);
+                        }}
+                        className="text-xs bg-gray-500 hover:bg-gray-600 text-white px-2 py-1 mt-1"
+                      >
+                        Check All Events in DB
+                      </Button>
+                    </div>
+                  </div>
                 </div>
                 {/* Statistics */}
                 <div className="grid grid-cols-2 gap-4 mt-8">
                   <div className="bg-red-400 text-white p-4 rounded-lg text-center">
-                    <div className="font-bold text-lg">Visits</div>
-                    <div className="text-2xl font-bold">10K</div>
+                    <div className="font-bold text-lg">Total Events</div>
+                    <div className="text-2xl font-bold">{organizerEvents.length}</div>
                   </div>
                   <div className="bg-red-400 text-white p-4 rounded-lg text-center">
-                    <div className="font-bold text-lg">Apply</div>
-                    <div className="text-2xl font-bold">100 person</div>
+                    <div className="font-bold text-lg">Total Applicants</div>
+                    <div className="text-2xl font-bold">{volunteerApplicants.length}</div>
                   </div>
                 </div>
-                {/* Applicants List */}
+                {/* Volunteer Applicants List */}
                 <div className="bg-red-300 rounded-lg p-4 mt-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Volunteer Applicants</h3>
                   <div className="space-y-3 h-[300px] overflow-y-scroll">
-                    {applicants.map((applicant) => (
-                      <div
-                        key={applicant.id}
-                        className="flex items-center justify-between bg-gray-200 rounded-lg p-3"
-                      >
-                        <div className="flex items-center space-x-3">
-                          <div className="w-8 h-8 bg-gray-400 rounded-full flex items-center justify-center">
-                            <User className="w-5 h-5 text-white" />
-                          </div>
-                          <span className="font-medium">{applicant.name}</span>
-                        </div>
-                        <Select
-                          value={applicantStatuses[applicant.id] || "pending"}
-                          onValueChange={(value) => handleStatusChange(applicant.id, value)}
-                        >
-                          <SelectTrigger className="w-24 h-8 text-xs">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="pending">Pending</SelectItem>
-                            <SelectItem value="pass">Pass</SelectItem>
-                            <SelectItem value="fail">Fail</SelectItem>
-                          </SelectContent>
-                        </Select>
+                    {isLoadingApplicants ? (
+                      <div className="flex items-center justify-center h-full">
+                        <div className="text-gray-500">Loading applications...</div>
                       </div>
-                    ))}
+                    ) : volunteerApplicants.length === 0 ? (
+                      <div className="flex items-center justify-center h-full">
+                        <div className="text-gray-500">No applications yet</div>
+                      </div>
+                    ) : (
+                      volunteerApplicants.map((applicant) => (
+                        <div
+                          key={applicant.id}
+                          className="flex items-center justify-between bg-gray-200 rounded-lg p-3"
+                        >
+                          <div className="flex items-center space-x-3">
+                            <div className="w-8 h-8 bg-gray-400 rounded-full flex items-center justify-center">
+                              <User className="w-5 h-5 text-white" />
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="font-medium">
+                                {applicant.profile?.first_name || 'N/A'} {applicant.profile?.last_name || ''}
+                              </span>
+                              <span className="text-xs text-gray-600">{applicant.opportunity?.title || 'Unknown Event'}</span>
+                              <span className="text-xs text-gray-500">
+                                Applied: {applicant.applied_at ? new Date(applicant.applied_at).toLocaleDateString() : 'N/A'}
+                              </span>
+                            </div>
+                          </div>
+                          <Select
+                            value={applicantStatuses[applicant.id] || applicant.status || "pending"}
+                            onValueChange={(value) => handleStatusChange(applicant.id, value)}
+                          >
+                            <SelectTrigger className="w-24 h-8 text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="pending">Pending</SelectItem>
+                              <SelectItem value="approved">Approved</SelectItem>
+                              <SelectItem value="rejected">Rejected</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      ))
+                    )}
                   </div>
                   <div className="text-center mt-4">
                     <Button variant="ghost" className="text-gray-700 hover:text-gray-900">

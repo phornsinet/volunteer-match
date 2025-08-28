@@ -1,15 +1,16 @@
 "use client"
 
-import type React from "react"
-
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { supabase } from "@/lib/supabase"
+import { createClient } from "../../../utils/supabase/client";
 
 export default function PostingPage() {
+  const supabaseClient = createClient(); // Use the same client as account-organizer page
   const [formData, setFormData] = useState({
     title: "",
     organizerName: "",
@@ -20,6 +21,61 @@ export default function PostingPage() {
     benefit: "",
     poster: null as File | null,
   })
+
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
+
+  // Check authentication status on component mount
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        console.log("Checking authentication status...");
+        const { data: { user }, error } = await supabaseClient.auth.getUser();
+        console.log("Auth check - User:", user);
+        console.log("Auth check - Error:", error);
+        
+        if (user) {
+          setIsAuthenticated(true);
+          console.log("User is authenticated:", user.email);
+        } else {
+          setIsAuthenticated(false);
+          console.log("User is not authenticated");
+        }
+      } catch (error) {
+        console.error("Auth check failed:", error);
+        setIsAuthenticated(false);
+      }
+    };
+    
+    checkAuth();
+  }, []);
+
+  // Show loading state while checking auth
+  if (isAuthenticated === null) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-lg">Checking authentication...</div>
+      </div>
+    );
+  }
+
+  // Show login required message if not authenticated
+  if (isAuthenticated === false) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold mb-4">Authentication Required</h2>
+          <p className="text-gray-600 mb-4">You must be logged in to create an opportunity.</p>
+          <button 
+            onClick={() => window.location.href = '/login'}
+            className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded"
+          >
+            Go to Login
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({
@@ -33,10 +89,86 @@ export default function PostingPage() {
     setFormData((prev) => ({ ...prev, poster: file }))
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    console.log("Posting form submitted:", formData)
-    // Handle form submission logic here
+    setIsSubmitting(true)
+
+    // Get current user with detailed logging
+    console.log("Attempting to get user for event creation...");
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+    console.log("User data:", user);
+    console.log("User error:", userError);
+    
+    if (!user) {
+      console.error("No user found, user must be logged in");
+      alert("You must be logged in to create an opportunity. Please log in and try again.");
+      setIsSubmitting(false);
+      return;
+    }
+
+    console.log("User authenticated, proceeding with event creation...");
+    console.log("User ID:", user.id);
+    console.log("User Email:", user.email);
+
+    let posterUrl = null
+
+    // 1. Upload poster if present
+    if (formData.poster) {
+      console.log("Uploading poster...");
+      const fileExt = formData.poster.name.split('.').pop()
+      const fileName = `${Date.now()}.${fileExt}`
+      const { data, error } = await supabaseClient.storage
+        .from("posters") // Make sure you have a "posters" bucket in Supabase Storage
+        .upload(fileName, formData.poster)
+
+      if (error) {
+        console.error("Poster upload error:", error);
+        alert("Poster upload failed: " + error.message)
+        setIsSubmitting(false)
+        return
+      }
+      posterUrl = supabaseClient.storage.from("posters").getPublicUrl(fileName).data.publicUrl
+      console.log("Poster uploaded successfully:", posterUrl);
+    }
+
+    // 2. Insert opportunity data with user_id
+    console.log("Inserting opportunity data...");
+    const opportunityData = {
+      title: formData.title,
+      organizer_name: formData.organizerName,
+      location: formData.location,
+      duration: formData.duration,
+      email: formData.email,
+      requirement: formData.requirement,
+      benefit: formData.benefit,
+      poster_url: posterUrl,
+      user_id: user.id, // Add user_id to track who created the opportunity
+    };
+    
+    console.log("Opportunity data to insert:", opportunityData);
+    
+    const { error: insertError } = await supabaseClient.from("opportunities").insert([opportunityData])
+
+    setIsSubmitting(false)
+
+    if (insertError) {
+      console.error("Insert error:", insertError);
+      alert("Failed to post opportunity: " + insertError.message)
+    } else {
+      console.log("Opportunity posted successfully!");
+      alert("Opportunity posted successfully!")
+      // Optionally reset form
+      setFormData({
+        title: "",
+        organizerName: "",
+        location: "",
+        duration: "",
+        email: "",
+        requirement: "",
+        benefit: "",
+        poster: null,
+      })
+    }
   }
 
   const handleBack = () => {
@@ -197,8 +329,9 @@ export default function PostingPage() {
               <Button
                 type="submit"
                 className="w-full bg-red-500 hover:bg-red-600 text-white py-4 rounded-full text-lg font-bold"
+                disabled={isSubmitting}
               >
-                POST
+                {isSubmitting ? "POSTING..." : "POST"}
               </Button>
             </div>
           </form>

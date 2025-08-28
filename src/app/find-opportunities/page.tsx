@@ -14,12 +14,12 @@ export default function FindOpportunitiesPage() {
     <div className="min-h-screen bg-white">
       <AuthProvider>
         <HeroSection1 />
+        <SearchFilters />
+        <Card />
+        <Wus />
+        <FeedBack/>
+        <TrustSection />
       </AuthProvider>
-      <SearchFilters />
-      <Card />
-      <Wus />
-      <FeedBack/>
-      <TrustSection />
     </div>
   )
 }

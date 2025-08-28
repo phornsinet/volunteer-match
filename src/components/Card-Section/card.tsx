@@ -3,26 +3,62 @@ import type React from "react"
 import { Button } from "@/components/ui/button"
 import { MapPin, ChevronLeft, ChevronRight, Clock10Icon, HomeIcon, WorkflowIcon } from "lucide-react"
 import Link from "next/link"
-import { useRef } from "react"
+import { useRef, useState, useEffect } from "react"
 import Image from "next/image";
 import { useAuth } from "@/action/auth";
 import toast, { Toaster } from "react-hot-toast";
+import { createClient } from "../../../utils/supabase/client"
+
+interface Opportunity {
+  id: string;
+  title: string;
+  organizer_name: string;
+  location: string;
+  duration: string;
+  email: string;
+  requirement: string;
+  benefit: string;
+  poster_url: string | null;
+  created_at: string;
+}
 
 export default function Card() {
+  const supabase = createClient();
   const cardContainerRef = useRef<HTMLDivElement>(null)
   const { session } = useAuth() ?? {};
+  const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const handleApplyClick = (e: React.MouseEvent<HTMLButtonElement>) => {
-    if (!session) {
-        e.preventDefault();
-        toast.error("Please login before applying");
-    }
-  };
+  // Fetch opportunities from Supabase
+  useEffect(() => {
+    const fetchOpportunities = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('opportunities')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          console.error('Error fetching opportunities:', error);
+          toast.error('Failed to load opportunities');
+        } else {
+          setOpportunities(data || []);
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        toast.error('Failed to load opportunities');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchOpportunities();
+  }, []);
 
   const scrollLeft = () => {
     if (cardContainerRef.current) {
       cardContainerRef.current.scrollBy({
-        left: -300, // Adjust this value to control how much to scroll
+        left: -300,
         behavior: "smooth",
       })
     }
@@ -31,7 +67,7 @@ export default function Card() {
   const scrollRight = () => {
     if (cardContainerRef.current) {
       cardContainerRef.current.scrollBy({
-        left: 300, // Adjust this value to control how much to scroll
+        left: 300,
         behavior: "smooth",
       })
     }
@@ -66,142 +102,67 @@ export default function Card() {
             <ChevronRight className="w-4 h-4" />
           </Button>
 
-          {/* This is the new scrollable container */}
           <div
             ref={cardContainerRef}
             className="flex space-x-6 overflow-x-scroll scrollbar-hide mx-12"
           >
-            {/* Card 1 */}
-            <div className="min-w-[300px] rounded-lg p-6 text-white">
-              <Image
-                src="/p1.jpeg"
-                alt="Volunteers outdoors"
-                width={300}
-                height={240}
-                className="w-full h-60 object-cover rounded mb-4 transition-transform duration-200 hover:scale-105"
-              />
-              <h3 className="font-bold mb-2">YOU LOGO Volunteer for your cause</h3>
-              <div className="flex items-center text-sm mb-2">
-                <HomeIcon className="w-4 h-4 mr-1" />
-                <span>Organization: YOUGO</span>
+            {loading ? (
+              // Loading state
+              <div className="min-w-[300px] rounded-lg p-6 text-white">
+                <div className="animate-pulse">
+                  <div className="w-full h-60 bg-gray-300 rounded mb-4"></div>
+                  <div className="h-4 bg-gray-300 rounded mb-2"></div>
+                  <div className="h-3 bg-gray-300 rounded mb-2"></div>
+                  <div className="h-3 bg-gray-300 rounded mb-2"></div>
+                </div>
               </div>
-              <div className="flex items-center text-sm mb-2">
-                <MapPin className="w-4 h-4 mr-1" />
-                <span>Phnom Penh, Cambodia</span>
+            ) : opportunities.length > 0 ? (
+              // Display opportunities from database
+              opportunities.map((opportunity) => (
+                <div key={opportunity.id} className="min-w-[300px] rounded-lg p-6 text-white">
+                  <div className="w-full h-60 bg-gray-100 rounded mb-4 overflow-hidden flex items-center justify-center">
+                    <Image
+                      src={opportunity.poster_url || "/p1.jpeg"}
+                      alt={opportunity.title}
+                      width={300}
+                      height={240}
+                      className="w-full h-full object-contain transition-transform duration-200 hover:scale-105"
+                      style={{ aspectRatio: '11/17' }} // Standard poster ratio (11" x 17")
+                    />
+                  </div>
+                  <h3 className="font-bold mb-2">{opportunity.title}</h3>
+                  <div className="flex items-center text-sm mb-2">
+                    <HomeIcon className="w-4 h-4 mr-1" />
+                    <span>Organization: {opportunity.organizer_name}</span>
+                  </div>
+                  <div className="flex items-center text-sm mb-2">
+                    <MapPin className="w-4 h-4 mr-1" />
+                    <span>{opportunity.location}</span>
+                  </div>
+                  <div className="flex items-center text-sm mb-2">
+                    <WorkflowIcon className="w-4 h-4 mr-1" />
+                    <span>{opportunity.duration}</span>
+                  </div>
+                  <div className="flex items-center text-sm mb-2">
+                    <Clock10Icon className="w-4 h-4 mr-1" />
+                    <span>Posted: {new Date(opportunity.created_at).toLocaleDateString()}</span>
+                  </div>
+                  <Link href="/application">
+                    <Button 
+                      className="bg-red-400 text-white px-2 py-1 rounded text-sm font-bold mb-4 inline-block transition-transform duration-200 hover:scale-105"
+                    >
+                      APPLY
+                    </Button>
+                  </Link>
+                </div>
+              ))
+            ) : (
+              // No opportunities found
+              <div className="min-w-[300px] rounded-lg p-6 text-white text-center">
+                <p>No opportunities available yet.</p>
+                <p className="text-sm mt-2">Be the first to post one!</p>
               </div>
-              <div className="flex items-center text-sm mb-2">
-                <WorkflowIcon className="w-4 h-4 mr-1" />
-                <span>Graphic Design| 3h/Week</span>
-              </div>
-              <div className="flex items-center text-sm mb-2">
-                <Clock10Icon className="w-4 h-4 mr-1" />
-                <span>Deadline:12 Dec, 2025 </span>
-              </div>
-              <Link href="/application">
-                <Button onClick={handleApplyClick} className="bg-red-400 text-white px-2 py-1 rounded text-sm font-bold mb-4 inline-block transition-transform duration-200 hover:scale-105">
-                  APPLY
-                </Button>
-              </Link>
-            </div>
-
-            {/* Card 2 */}
-            <div className="min-w-[300px] rounded-lg p-6 text-white">
-              <Image
-                src="/p2.webp"
-                alt="Volunteers outdoors"
-                width={300}
-                height={240}
-                className="w-full h-60 object-cover rounded mb-4 transition-transform duration-200 hover:scale-105"
-              />
-              <h3 className="font-bold mb-2">YOU LOGO Volunteer for your cause</h3>
-              <div className="flex items-center text-sm mb-2">
-                <HomeIcon className="w-4 h-4 mr-1" />
-                <span>Organization: YOUGO</span>
-              </div>
-              <div className="flex items-center text-sm mb-2">
-                <MapPin className="w-4 h-4 mr-1" />
-                <span>Phnom Penh, Cambodia</span>
-              </div>
-              <div className="flex items-center text-sm mb-2">
-                <WorkflowIcon className="w-4 h-4 mr-1" />
-                <span>Graphic Design| 3h/Week</span>
-              </div>
-              <div className="flex items-center text-sm mb-2">
-                <Clock10Icon className="w-4 h-4 mr-1" />
-                <span>Deadline:12 Dec, 2025 </span>
-              </div>
-              <Link href="/application">
-                <Button onClick={handleApplyClick} className="bg-red-400 text-white px-2 py-1 rounded text-sm font-bold mb-4 inline-block transition-transform duration-200 hover:scale-105">
-                  APPLY
-                </Button>
-              </Link>
-            </div>
-
-            {/* Card 3 */}
-            <div className="min-w-[300px] rounded-lg p-6 text-white">
-              <Image
-                src="/p3.jpg"
-                alt="Volunteers outdoors"
-                width={300}
-                height={240}
-                className="w-full h-60 object-cover rounded mb-4 transition-transform duration-200 hover:scale-105"
-              />
-              <h3 className="font-bold mb-2">YOU LOGO Volunteer for your cause</h3>
-              <div className="flex items-center text-sm mb-2">
-                <HomeIcon className="w-4 h-4 mr-1" />
-                <span>Organization: YOUGO</span>
-              </div>
-              <div className="flex items-center text-sm mb-2">
-                <MapPin className="w-4 h-4 mr-1" />
-                <span>Phnom Penh, Cambodia</span>
-              </div>
-              <div className="flex items-center text-sm mb-2">
-                <WorkflowIcon className="w-4 h-4 mr-1" />
-                <span>Graphic Design| 3h/Week</span>
-              </div>
-              <div className="flex items-center text-sm mb-2">
-                <Clock10Icon className="w-4 h-4 mr-1" />
-                <span>Deadline:12 Dec, 2025 </span>
-              </div>
-              <Link href="/application">
-                <Button onClick={handleApplyClick} className="bg-red-400 text-white px-2 py-1 rounded text-sm font-bold mb-4 inline-block transition-transform duration-200 hover:scale-105">
-                  APPLY
-                </Button>
-              </Link>
-            </div>
-
-            {/* Card 4 */}
-            <div className="min-w-[300px] rounded-lg p-6 text-white">
-              <Image
-                src="/p4.webp"
-                alt="Volunteers outdoors"
-                width={300}
-                height={240}
-                className="w-full h-60 object-cover rounded mb-4 transition-transform duration-200 hover:scale-105"
-              />
-              <h3 className="font-bold mb-2">YOU LOGO Volunteer for your cause</h3>
-              <div className="flex items-center text-sm mb-2">
-                <HomeIcon className="w-4 h-4 mr-1" />
-                <span>Organization: YOUGO</span>
-              </div>
-              <div className="flex items-center text-sm mb-2">
-                <MapPin className="w-4 h-4 mr-1" />
-                <span>Phnom Penh, Cambodia</span>
-              </div>
-              <div className="flex items-center text-sm mb-2">
-                <WorkflowIcon className="w-4 h-4 mr-1" />
-                <span>Graphic Design| 3h/Week</span>
-              </div>
-              <div className="flex items-center text-sm mb-2">
-                <Clock10Icon className="w-4 h-4 mr-1" />
-                <span>Deadline:12 Dec, 2025 </span>
-              </div>
-              <Link href="/application">
-                <Button onClick={handleApplyClick} className="bg-red-400 text-white px-2 py-1 rounded text-sm font-bold mb-4 inline-block transition-transform duration-200 hover:scale-105">
-                  APPLY
-                </Button>
-              </Link>
-            </div>
+            )}
           </div>
         </div>
       </div>
