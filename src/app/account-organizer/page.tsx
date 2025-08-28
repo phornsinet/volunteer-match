@@ -8,7 +8,7 @@ import { User } from "lucide-react"
 import Image from "next/image"
 import { createClient } from "../../../utils/supabase/client";
 import toast from "react-hot-toast";
-import { getAccountDetails, updateAccountDetails, getOrganizerOpportunities, getOrganizerOpportunitiesByUserId, getAllOpportunities, createTestOpportunity, OpportunityData, getOrganizerApplications, updateApplicationStatus, OrganizerApplicationData } from "@/components/profiles"; // Updated imports
+import { getAccountDetails, updateAccountDetails, getOrganizerOpportunities, getOrganizerOpportunitiesByUserId, getAllOpportunities, createTestOpportunity, OpportunityData, getOrganizerApplications, updateApplicationStatus, OrganizerApplicationData, getAllGeneralApplications, updateGeneralApplicationStatus, GeneralApplicationData } from "@/components/profiles"; // Updated imports
 
 export default function AccountPage() {
   const supabase = createClient();
@@ -76,21 +76,18 @@ export default function AccountPage() {
 
   // Function to refresh applications
   const refreshApplications = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      console.log("Refreshing applications for organizer ID:", user.id);
-      setIsLoadingApplicants(true);
-      try {
-        const applications = await getOrganizerApplications(user.id);
-        console.log("Refreshed applications:", applications);
-        setVolunteerApplicants(applications);
-        toast.success("Applications refreshed!");
-      } catch (error) {
-        console.error("Failed to refresh applications:", error);
-        toast.error("Failed to refresh applications");
-      } finally {
-        setIsLoadingApplicants(false);
-      }
+    console.log("Refreshing general applications...");
+    setIsLoadingApplicants(true);
+    try {
+      const applications = await getAllGeneralApplications();
+      console.log("Refreshed general applications:", applications);
+      setGeneralApplicants(applications);
+      toast.success("Applications refreshed!");
+    } catch (error) {
+      console.error("Failed to refresh applications:", error);
+      toast.error("Failed to refresh applications");
+    } finally {
+      setIsLoadingApplicants(false);
     }
   }
 
@@ -215,9 +212,11 @@ export default function AccountPage() {
     };
   }, [userInfo.email]);
 
-  // Volunteer applicants for organizer's events (real data from database)
-  const [volunteerApplicants, setVolunteerApplicants] = useState<OrganizerApplicationData[]>([])
+  // General applicants from applications table (real data from database)
+  const [generalApplicants, setGeneralApplicants] = useState<GeneralApplicationData[]>([])
   const [isLoadingApplicants, setIsLoadingApplicants] = useState(true)
+  const [selectedApplicant, setSelectedApplicant] = useState<GeneralApplicationData | null>(null)
+  const [isModalOpen, setIsModalOpen] = useState(false)
 
   const handleInputChange = (field: string, value: string) => {
     setUserInfo((prev) => ({
@@ -266,7 +265,13 @@ export default function AccountPage() {
 
   const handleStatusChange = async (applicantId: string, status: string) => {
     try {
-      await updateApplicationStatus(applicantId, status);
+      await updateGeneralApplicationStatus(applicantId, status);
+      // Update local state
+      setGeneralApplicants(prev => 
+        prev.map(app => 
+          app.id === applicantId ? { ...app, status: status as 'pending' | 'approved' | 'rejected' } : app
+        )
+      );
       setApplicantStatuses((prev) => ({
         ...prev,
         [applicantId]: status,
@@ -542,26 +547,30 @@ export default function AccountPage() {
                   </div>
                   <div className="bg-red-400 text-white p-4 rounded-lg text-center">
                     <div className="font-bold text-lg">Total Applicants</div>
-                    <div className="text-2xl font-bold">{volunteerApplicants.length}</div>
+                    <div className="text-2xl font-bold">{generalApplicants.length}</div>
                   </div>
                 </div>
                 {/* Volunteer Applicants List */}
                 <div className="bg-red-300 rounded-lg p-4 mt-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Volunteer Applicants</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">General Applications</h3>
                   <div className="space-y-3 h-[300px] overflow-y-scroll">
                     {isLoadingApplicants ? (
                       <div className="flex items-center justify-center h-full">
                         <div className="text-gray-500">Loading applications...</div>
                       </div>
-                    ) : volunteerApplicants.length === 0 ? (
+                    ) : generalApplicants.length === 0 ? (
                       <div className="flex items-center justify-center h-full">
                         <div className="text-gray-500">No applications yet</div>
                       </div>
                     ) : (
-                      volunteerApplicants.map((applicant) => (
+                      generalApplicants.map((applicant) => (
                         <div
                           key={applicant.id}
-                          className="flex items-center justify-between bg-gray-200 rounded-lg p-3"
+                          className="flex items-center justify-between bg-gray-200 rounded-lg p-3 cursor-pointer hover:bg-gray-300 transition-colors"
+                          onClick={() => {
+                            setSelectedApplicant(applicant);
+                            setIsModalOpen(true);
+                          }}
                         >
                           <div className="flex items-center space-x-3">
                             <div className="w-8 h-8 bg-gray-400 rounded-full flex items-center justify-center">
@@ -569,27 +578,30 @@ export default function AccountPage() {
                             </div>
                             <div className="flex flex-col">
                               <span className="font-medium">
-                                {applicant.profile?.first_name || 'N/A'} {applicant.profile?.last_name || ''}
+                                {applicant.first_name} {applicant.last_name}
                               </span>
-                              <span className="text-xs text-gray-600">{applicant.opportunity?.title || 'Unknown Event'}</span>
                               <span className="text-xs text-gray-500">
-                                Applied: {applicant.applied_at ? new Date(applicant.applied_at).toLocaleDateString() : 'N/A'}
+                                Applied: {new Date(applicant.created_at).toLocaleDateString()}
                               </span>
                             </div>
                           </div>
-                          <Select
-                            value={applicantStatuses[applicant.id] || applicant.status || "pending"}
-                            onValueChange={(value) => handleStatusChange(applicant.id, value)}
-                          >
-                            <SelectTrigger className="w-24 h-8 text-xs">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="pending">Pending</SelectItem>
-                              <SelectItem value="approved">Approved</SelectItem>
-                              <SelectItem value="rejected">Rejected</SelectItem>
-                            </SelectContent>
-                          </Select>
+                          <div className="flex items-center space-x-2">
+                            <div onClick={(e) => e.stopPropagation()}>
+                              <Select
+                                value={applicantStatuses[applicant.id] || applicant.status || "pending"}
+                                onValueChange={(value) => handleStatusChange(applicant.id, value)}
+                              >
+                                <SelectTrigger className="w-24 h-8 text-xs">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="pending">Pending</SelectItem>
+                                  <SelectItem value="approved">Approved</SelectItem>
+                                  <SelectItem value="rejected">Rejected</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
                         </div>
                       ))
                     )}
@@ -605,6 +617,140 @@ export default function AccountPage() {
           </div>
         </div>
       </section>
+
+      {/* Application Details Modal */}
+      {isModalOpen && selectedApplicant && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">Application Details</h2>
+              <Button
+                variant="ghost"
+                onClick={() => setIsModalOpen(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ✕
+              </Button>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-gray-700 font-medium">First Name</Label>
+                  <div className="mt-1 p-2 bg-gray-50 rounded border">{selectedApplicant.first_name}</div>
+                </div>
+                <div>
+                  <Label className="text-gray-700 font-medium">Last Name</Label>
+                  <div className="mt-1 p-2 bg-gray-50 rounded border">{selectedApplicant.last_name}</div>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-gray-700 font-medium">Gender</Label>
+                  <div className="mt-1 p-2 bg-gray-50 rounded border">{selectedApplicant.gender}</div>
+                </div>
+                <div>
+                  <Label className="text-gray-700 font-medium">Date of Birth</Label>
+                  <div className="mt-1 p-2 bg-gray-50 rounded border">
+                    {new Date(selectedApplicant.date_of_birth).toLocaleDateString()}
+                  </div>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-gray-700 font-medium">Email</Label>
+                  <div className="mt-1 p-2 bg-gray-50 rounded border">{selectedApplicant.email}</div>
+                </div>
+                <div>
+                  <Label className="text-gray-700 font-medium">Phone Number</Label>
+                  <div className="mt-1 p-2 bg-gray-50 rounded border">{selectedApplicant.phone_number}</div>
+                </div>
+              </div>
+              
+              <div>
+                <Label className="text-gray-700 font-medium">Why do you want to apply?</Label>
+                <div className="mt-1 p-3 bg-gray-50 rounded border whitespace-pre-wrap">
+                  {selectedApplicant.why_apply}
+                </div>
+              </div>
+              
+              <div>
+                <Label className="text-gray-700 font-medium">Why should we choose you?</Label>
+                <div className="mt-1 p-3 bg-gray-50 rounded border whitespace-pre-wrap">
+                  {selectedApplicant.why_choose_you}
+                </div>
+              </div>
+              
+              <div>
+                <Label className="text-gray-700 font-medium">Experience</Label>
+                <div className="mt-1 p-3 bg-gray-50 rounded border whitespace-pre-wrap">
+                  {selectedApplicant.experience}
+                </div>
+              </div>
+
+              {selectedApplicant.cv_url && (
+                <div>
+                  <Label className="text-gray-700 font-medium">CV</Label>
+                  <div className="mt-1">
+                    <Button
+                      onClick={() => selectedApplicant.cv_url && window.open(selectedApplicant.cv_url, '_blank')}
+                      className="bg-blue-500 hover:bg-blue-600 text-white"
+                    >
+                      View CV
+                    </Button>
+                  </div>
+                </div>
+              )}
+              
+              <div>
+                <Label className="text-gray-700 font-medium">Application Date</Label>
+                <div className="mt-1 p-2 bg-gray-50 rounded border">
+                  {new Date(selectedApplicant.created_at).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </div>
+              </div>
+            </div>
+            
+            {/* Action Buttons */}
+            <div className="flex justify-center space-x-4 mt-6 pt-4 border-t">
+              <Button
+                onClick={() => {
+                  handleStatusChange(selectedApplicant.id, 'approved');
+                  setIsModalOpen(false);
+                }}
+                className="bg-green-500 hover:bg-green-600 text-white px-6 py-2"
+              >
+                Approve
+              </Button>
+              <Button
+                onClick={() => {
+                  handleStatusChange(selectedApplicant.id, 'pending');
+                  setIsModalOpen(false);
+                }}
+                className="bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-2"
+              >
+                Pending
+              </Button>
+              <Button
+                onClick={() => {
+                  handleStatusChange(selectedApplicant.id, 'rejected');
+                  setIsModalOpen(false);
+                }}
+                className="bg-red-500 hover:bg-red-600 text-white px-6 py-2"
+              >
+                Reject
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -67,6 +67,23 @@ export interface OrganizerApplicationData {
   };
 }
 
+// Interface for applications table data
+export interface GeneralApplicationData {
+  id: string;
+  first_name: string;
+  last_name: string;
+  gender: string;
+  date_of_birth: string;
+  email: string;
+  phone_number: string;
+  why_apply: string;
+  why_choose_you: string;
+  experience: string;
+  cv_url?: string | null;
+  created_at: string;
+  status?: 'pending' | 'approved' | 'rejected'; // We can add this field to track status
+}
+
 // Get account details
 export async function getAccountDetails(accountId: string): Promise<AccountDetailsData | null> {
   try {
@@ -409,6 +426,58 @@ export async function updateApplicationStatus(applicationId: string, status: str
     return true;
   } catch (error: any) {
     console.error("Error in updateApplicationStatus:", error);
+    throw error;
+  }
+}
+
+// Get all general applications from applications table
+export async function getAllGeneralApplications(): Promise<GeneralApplicationData[]> {
+  try {
+    console.log("Fetching all general applications...");
+    
+    const { data, error } = await supabase
+      .from("applications")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    console.log("General applications query result:", { data, error });
+
+    if (error) {
+      console.error("General applications query error:", error);
+      throw error;
+    }
+
+    console.log("Returning general applications data:", data || []);
+    return data || [];
+  } catch (error: any) {
+    console.error("Error in getAllGeneralApplications:", error);
+    throw error;
+  }
+}
+
+// Update general application status (if you add status column to applications table)
+export async function updateGeneralApplicationStatus(applicationId: string, status: string): Promise<boolean> {
+  try {
+    console.log("Updating general application status:", { applicationId, status });
+    
+    // Note: This assumes you have a status column in applications table
+    // If not, you might want to create a separate table for application statuses
+    const { error } = await supabase
+      .from("applications")
+      .update({ status })
+      .eq("id", applicationId);
+
+    console.log("General application status update result:", { error });
+
+    if (error) {
+      console.error("Error updating general application status:", error);
+      throw error;
+    }
+
+    console.log("General application status updated successfully");
+    return true;
+  } catch (error: any) {
+    console.error("Error in updateGeneralApplicationStatus:", error);
     throw error;
   }
 }
