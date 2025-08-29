@@ -2,20 +2,20 @@
 
 "use client";
 
-import type React from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { createClient } from "../../../utils/supabase/client";
 import toast from "react-hot-toast";
-import { createClient } from "@supabase/supabase-js";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 
 export default function RegisterPage() {
-  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
+  const supabase = createClient();
   const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -113,6 +113,7 @@ export default function RegisterPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
 
     const { isValid, newErrors } = validateForm();
 
@@ -123,6 +124,7 @@ export default function RegisterPage() {
       } else {
         toast.error("Please fix the errors in the form.");
       }
+      setLoading(false);
       return;
     }
 
@@ -131,7 +133,9 @@ export default function RegisterPage() {
       const firstName = nameParts.shift() || "";
       const lastName = nameParts.join(" ");
 
-      const { error } = await supabase.auth.signUp({
+      console.log('🔄 Creating user account with trigger...');
+      
+      const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
         options: {
@@ -140,23 +144,41 @@ export default function RegisterPage() {
             last_name: lastName,
             phone_number: formData.phoneNumber,
             user_role: formData.userRole,
+            full_name: formData.fullName,
           },
         },
       });
 
-      if (error) {
-        toast.error(error.message);
-      } else {
-        toast.success("Registration successful! Redirecting...");
+      if (authError) {
+        console.error('❌ Auth error:', authError.message);
+        toast.error(authError.message);
+        setLoading(false);
+        return;
+      }
+
+      console.log('✅ User account created:', authData.user?.id);
+      console.log('✅ Profile created automatically by database trigger');
+
+      toast.success("Registration successful! Please check your email to verify your account.");
+      
+      // Redirect based on user role
+      setTimeout(() => {
         if (formData.userRole === "organization") {
           router.push("/find-organization");
         } else {
           router.push("/find-opportunities");
         }
-      }
+      }, 2000);
+
     } catch (error) {
-      console.error('Supabase registration error:', error);
-      toast.error('An unexpected error occurred. Please try again.');
+      console.error('❌ Unexpected registration error:', error);
+      if (error instanceof Error) {
+        toast.error(`An unexpected error occurred: ${error.message}`);
+      } else {
+        toast.error('An unexpected error occurred. Please try again.');
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -173,7 +195,7 @@ export default function RegisterPage() {
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
                 <Label htmlFor="fullName" className="text-black font-medium">
-                  Full Name/ Organization<span className="text-red-600 ml-1">*</span>
+                  Full Name / Organization Name
                 </Label>
                 <Input
                   id="fullName"
@@ -183,13 +205,16 @@ export default function RegisterPage() {
                   className="mt-2 bg-white border-gray-300 rounded-md h-12"
                   placeholder="Enter your full name or organization name"
                   required
+                  disabled={loading}
                 />
-                {errors.fullName && <p className="text-white text-xs mt-1">{errors.fullName}</p>}
+                {errors.fullName && (
+                  <p className="text-red-800 text-sm mt-1">{errors.fullName}</p>
+                )}
               </div>
 
               <div>
                 <Label htmlFor="email" className="text-black font-medium">
-                  Email<span className="text-red-600 ml-1">*</span>
+                  Email Address
                 </Label>
                 <Input
                   id="email"
@@ -199,13 +224,16 @@ export default function RegisterPage() {
                   className="mt-2 bg-white border-gray-300 rounded-md h-12"
                   placeholder="This will be used for login and communication"
                   required
+                  disabled={loading}
                 />
-                {errors.email && <p className="text-white text-xs mt-1">{errors.email}</p>}
+                {errors.email && (
+                  <p className="text-red-800 text-sm mt-1">{errors.email}</p>
+                )}
               </div>
 
               <div>
                 <Label htmlFor="phoneNumber" className="text-black font-medium">
-                  Phone Number<span className="text-red-600 ml-1">*</span>
+                  Phone Number
                 </Label>
                 <Input
                   id="phoneNumber"
@@ -215,13 +243,16 @@ export default function RegisterPage() {
                   className="mt-2 bg-white border-gray-300 rounded-md h-12"
                   placeholder="Please provide a contact phone number"
                   required
+                  disabled={loading}
                 />
-                {errors.phoneNumber && <p className="text-white text-xs mt-1">{errors.phoneNumber}</p>}
+                {errors.phoneNumber && (
+                  <p className="text-red-800 text-sm mt-1">{errors.phoneNumber}</p>
+                )}
               </div>
 
               <div>
                 <Label htmlFor="password" className="text-black font-medium">
-                  Password<span className="text-red-600 ml-1">*</span>
+                  Password
                 </Label>
                 <Input
                   id="password"
@@ -231,13 +262,16 @@ export default function RegisterPage() {
                   className="mt-2 bg-white border-gray-300 rounded-md h-12"
                   placeholder="Password must be at least 6 characters long"
                   required
+                  disabled={loading}
                 />
-                {errors.password && <p className="text-white text-xs mt-1">{errors.password}</p>}
+                {errors.password && (
+                  <p className="text-red-800 text-sm mt-1">{errors.password}</p>
+                )}
               </div>
 
               <div>
                 <Label htmlFor="confirmPassword" className="text-black font-medium">
-                  Confirm Password<span className="text-red-600 ml-1">*</span>
+                  Confirm Password
                 </Label>
                 <Input
                   id="confirmPassword"
@@ -245,40 +279,58 @@ export default function RegisterPage() {
                   value={formData.confirmPassword}
                   onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
                   className="mt-2 bg-white border-gray-300 rounded-md h-12"
-                  placeholder="Please enter the same password as above"
+                  placeholder="Re-enter your password"
                   required
+                  disabled={loading}
                 />
-                {errors.confirmPassword && <p className="text-white text-xs mt-1">{errors.confirmPassword}</p>}
+                {errors.confirmPassword && (
+                  <p className="text-red-800 text-sm mt-1">{errors.confirmPassword}</p>
+                )}
               </div>
 
               <div>
                 <Label htmlFor="userRole" className="text-black font-medium">
-                  User Role<span className="text-red-600 ml-1">*</span>
+                  I am a...
                 </Label>
-                <Select onValueChange={(value) => handleInputChange("userRole", value)} required>
+                <Select 
+                  value={formData.userRole} 
+                  onValueChange={(value) => handleInputChange("userRole", value)}
+                  disabled={loading}
+                >
                   <SelectTrigger className="mt-2 bg-white border-gray-300 rounded-md h-12">
-                    <SelectValue placeholder="Select your role (Volunteer or Organization)" />
+                    <SelectValue placeholder="Select your role" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="volunteer">Volunteer</SelectItem>
                     <SelectItem value="organization">Organization</SelectItem>
                   </SelectContent>
                 </Select>
-                {errors.userRole && <p className="text-white text-xs mt-1">{errors.userRole}</p>}
+                {errors.userRole && (
+                  <p className="text-red-800 text-sm mt-1">{errors.userRole}</p>
+                )}
               </div>
 
               <Button
                 type="submit"
-                className="w-full bg-blue-500 hover:bg-blue-700 text-white font-semibold py-3 rounded-full text-lg mt-8">
-                Register
+                disabled={loading}
+                className="w-full bg-black text-white hover:bg-gray-800 h-12 text-lg font-medium rounded-md"
+              >
+                {loading ? (
+                  <div className="flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                    Creating Account...
+                  </div>
+                ) : (
+                  "Create Account"
+                )}
               </Button>
 
-              <div className="text-center mt-6">
-                <p className="text-black">
+              <div className="text-center">
+                <p className="text-gray-200">
                   Already have an account?{" "}
-                  <Link href="/login" className="text-blue-600 hover:text-red-700 underline">
-                    Sign in
-                  </Link>
+                  <a href="/login" className="text-black font-medium hover:underline">
+                    Sign in here
+                  </a>
                 </p>
               </div>
             </form>

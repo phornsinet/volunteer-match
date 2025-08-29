@@ -1,12 +1,13 @@
 "use client"
+
 import type React from "react"
 import { Button } from "@/components/ui/button"
 import { MapPin, ChevronLeft, ChevronRight, Clock10Icon, HomeIcon, WorkflowIcon } from "lucide-react"
-import Link from "next/link"
 import { useRef, useState, useEffect } from "react"
-import Image from "next/image";
+import { createClient } from "../../../utils/supabase/client";
+import { AuthProvider, useAuth } from "@/action/auth"
 import toast, { Toaster } from "react-hot-toast";
-import { createClient } from "../../../utils/supabase/client"
+import Image from "next/image";
 
 interface Opportunity {
   id: string;
@@ -21,15 +22,26 @@ interface Opportunity {
   created_at: string;
 }
 
-export default function Card() {
+interface CardProps {
+  opportunities?: Opportunity[];
+}
+
+function CardContent({ opportunities: propOpportunities }: CardProps) {
   const supabase = createClient();
   const cardContainerRef = useRef<HTMLDivElement>(null)
-  // const { session } = useAuth() ?? {}; // session is not used
+  const auth = useAuth();
+  const [isVolunteer, setIsVolunteer] = useState(false);
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Fetch opportunities from Supabase
+  // Fetch opportunities from Supabase or use provided opportunities
   useEffect(() => {
+    if (propOpportunities) {
+      setOpportunities(propOpportunities);
+      setLoading(false);
+      return;
+    }
+
     const fetchOpportunities = async () => {
       try {
         const { data, error } = await supabase
@@ -52,12 +64,34 @@ export default function Card() {
     };
 
     fetchOpportunities();
-  }, [supabase]);
+  }, [supabase, propOpportunities]);
+
+  useEffect(() => {
+    const checkUserRole = async () => {
+      if (auth?.session?.user) {
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('user_role')
+          .eq('id', auth.session.user.id)
+          .single();
+
+        if (profileData?.user_role === 'volunteer') {
+          setIsVolunteer(true);
+        } else {
+          setIsVolunteer(false);
+        }
+      } else {
+        setIsVolunteer(false); // Not logged in, so not a volunteer
+      }
+    };
+
+    checkUserRole();
+  }, [auth, supabase]);
 
   const scrollLeft = () => {
     if (cardContainerRef.current) {
       cardContainerRef.current.scrollBy({
-        left: -300,
+        left: -300, // Adjust this value to control how much to scroll
         behavior: "smooth",
       })
     }
@@ -66,7 +100,7 @@ export default function Card() {
   const scrollRight = () => {
     if (cardContainerRef.current) {
       cardContainerRef.current.scrollBy({
-        left: 300,
+        left: 300, // Adjust this value to control how much to scroll
         behavior: "smooth",
       })
     }
@@ -146,13 +180,12 @@ export default function Card() {
                     <Clock10Icon className="w-4 h-4 mr-1" />
                     <span>Posted: {new Date(opportunity.created_at).toLocaleDateString()}</span>
                   </div>
-                  <Link href="/application">
-                    <Button 
-                      className="bg-red-400 text-white px-2 py-1 rounded text-sm font-bold mb-4 inline-block transition-transform duration-200 hover:scale-105"
-                    >
-                      APPLY
-                    </Button>
-                  </Link>
+                  <Button 
+                    className="bg-blue-400 text-white px-2 py-1 rounded text-sm font-bold mb-4 inline-block transition-transform duration-200 hover:scale-105" 
+                    disabled={!auth?.session || isVolunteer}
+                  >
+                    {!auth?.session ? "LOGIN TO APPLY" : isVolunteer ? "APPLIED" : "APPLY"}
+                  </Button>
                 </div>
               ))
             ) : (
@@ -163,8 +196,22 @@ export default function Card() {
               </div>
             )}
           </div>
+
+          <div className="flex justify-center mt-8 space-x-2">
+            <div className="w-3 h-3 bg-white rounded-full"></div>
+            <div className="w-3 h-3 bg-white bg-opacity-50 rounded-full"></div>
+            <div className="w-3 h-3 bg-white bg-opacity-50 rounded-full"></div>
+          </div>
         </div>
       </div>
     </section>
+  )
+}
+
+export default function Card({ opportunities }: CardProps) {
+  return (
+    <AuthProvider>
+      <CardContent opportunities={opportunities} />
+    </AuthProvider>
   )
 }
