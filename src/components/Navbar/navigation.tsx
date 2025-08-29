@@ -13,6 +13,7 @@ export default function Navigation() {
   const { session, loading, signOut } = useAuth() ?? {};
   const pathname = usePathname();
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   useEffect(() => {
     async function getUserRole() {
@@ -86,8 +87,6 @@ export default function Navigation() {
       );
     }
   };
-
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
     <nav className="bg-white">

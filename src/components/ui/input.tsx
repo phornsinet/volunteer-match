@@ -131,7 +131,7 @@ export default function ApplicationPage() {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
           // Fetch user profile from database
-          const { data: profile, error } = await supabase
+          const { error } = await supabase
             .from('users')
             .select('*')
             .eq('id', user.id)
