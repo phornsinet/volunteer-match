@@ -18,16 +18,16 @@ export function TrustSection() {
             <Image src="/FGC.png" alt="First Global" width={200} height={100} className="w-50 h-50 object-contain" />
           </div>
           <div className="w-40 h-40 rounded flex items-center justify-center">
-            <Image src="/habitat.png" alt="Habitat for Humanity" width={160} height={160} className="w-40 h-40 object-contain" />
+            <Image src="/Habitat.png" alt="Habitat for Humanity" width={160} height={160} className="w-40 h-40 object-contain" />
           </div>
           <div className="w-40 h-40 rounded flex items-center justify-center">
-            <Image src="/pact.jpg" alt="Pact" width={160} height={160} className="w-40 h-40 object-contain" />
+            <Image src="/Pact.jpg" alt="Pact" width={160} height={160} className="w-40 h-40 object-contain" />
           </div>
           <div className="w-40 h-40 rounded flex items-center justify-center">
             <Image src="/UNICEF.png" alt="UNICEF" width={160} height={160} className="w-40 h-40 object-contain" />
           </div>
           <div className="w-40 h-40 rounded flex items-center justify-center">
-            <Image src="/kirirom.png" alt="Kirirom Institute" width={160} height={160} className="w-40 h-40 object-contain" />
+            <Image src="/Kirirom.png" alt="Kirirom Institute" width={160} height={160} className="w-40 h-40 object-contain" />
           </div>
           <div className="w-40 h-40 rounded flex items-center justify-center">
             <Image src="/AUPP.png" alt="ARUPP" width={160} height={160} className="w-40 h-40 object-contain" />
